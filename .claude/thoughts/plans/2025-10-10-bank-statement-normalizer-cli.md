@@ -911,12 +911,12 @@ class MultiFileProcessor:
 
 #### Automated Verification:
 
-- [ ] All parser tests pass: `pytest tests/unit/test_parser.py -v`
-- [ ] CSV files can be parsed: Test with sample CSVs
-- [ ] Mappings save/load correctly: Verify JSON serialization
-- [ ] **Type checking passes with strict mode: `mypy src/budget_tracker/parsers/ --strict`**
-- [ ] **Linting passes with zero errors: `ruff check src/budget_tracker/parsers/`**
-- [ ] Delimiter detection works for comma and semicolon
+- [x] All parser tests pass: `pytest tests/unit/test_parser.py -v`
+- [x] CSV files can be parsed: Test with sample CSVs
+- [x] Mappings save/load correctly: Verify JSON serialization
+- [x] **Type checking passes with strict mode: `mypy src/budget_tracker/parsers/ --strict`**
+- [x] **Linting passes with zero errors: `ruff check src/budget_tracker/parsers/`**
+- [x] Delimiter detection works for comma and semicolon
 
 #### Manual Verification:
 
