@@ -562,7 +562,7 @@ Make executable: `chmod +x scripts/check_quality.sh`
 - [x] **Type checking passes with strict mode: `mypy src/ --strict`**
 - [x] **Linting passes with zero errors: `ruff check src/`**
 - [x] **Code formatting is correct: `ruff format src/ --check`**
-- [ ] **Quality check script runs successfully: `./scripts/check_quality.sh`**
+- [x] **Quality check script runs successfully: `./scripts/check_quality.sh`**
 - [x] Can import models: `python -c "from budget_tracker.models.transaction import StandardTransaction"`
 
 #### Manual Verification:
