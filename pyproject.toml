@@ -45,7 +45,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "ANN", "B", "C4", "DTZ", "T10", "EM", "ISC", "ICN", "G", "PIE", "PYI", "Q", "SIM", "TCH", "ARG", "PTH", "PD", "PL", "RUF"]
-ignore = []
+ignore = ["PLR2004"]
 
 [tool.ruff.format]
 quote-style = "double"

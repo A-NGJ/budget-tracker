@@ -1,21 +1,23 @@
-import pytest
-import pandas as pd
 from pathlib import Path
-from budget_tracker.parsers.csv_parser import CSVParser, detect_delimiter
+
+import pytest
+
 from budget_tracker.models.bank_mapping import BankMapping, ColumnMapping
+from budget_tracker.parsers.csv_parser import CSVParser, detect_delimiter
+
+
+@pytest.fixture
+def sample_csv(tmp_path: Path) -> Path:
+    """Create a sample CSV file for testing"""
+    csv_content = """Dato,Beløb,Tekst
+10-10-2025,125.50,Cafe X
+11-10-2025,-50.00,Supermarket"""
+    csv_file = tmp_path / "test_bank.csv"
+    csv_file.write_text(csv_content)
+    return csv_file
 
 
 class TestCSVParser:
-    @pytest.fixture
-    def sample_csv(self, tmp_path: Path) -> Path:
-        """Create a sample CSV file for testing"""
-        csv_content = """Dato,Beløb,Tekst
-10-10-2025,125.50,Cafe X
-11-10-2025,-50.00,Supermarket"""
-        csv_file = tmp_path / "test_bank.csv"
-        csv_file.write_text(csv_content)
-        return csv_file
-
     def test_detect_delimiter_comma(self, sample_csv: Path) -> None:
         """Test delimiter detection for comma-separated files"""
         delimiter = detect_delimiter(sample_csv)
@@ -44,11 +46,9 @@ class TestCSVParser:
         mapping = BankMapping(
             bank_name="Test Bank",
             column_mapping=ColumnMapping(
-                date_column="Dato",
-                amount_column="Beløb",
-                description_column="Tekst"
+                date_column="Dato", amount_column="Beløb", description_column="Tekst"
             ),
-            date_format="%d-%m-%Y"
+            date_format="%d-%m-%Y",
         )
         parser = CSVParser()
         raw_transactions = parser.load_with_mapping(sample_csv, mapping)
@@ -60,7 +60,7 @@ class TestCSVParser:
         bad_csv = tmp_path / "bad.csv"
         bad_csv.write_text("not,a,proper\ncsv,file")
         parser = CSVParser()
-        df, columns = parser.parse_file(bad_csv)
+        df, _ = parser.parse_file(bad_csv)
         assert df is not None  # Should not crash
 
 
