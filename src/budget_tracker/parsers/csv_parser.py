@@ -39,9 +39,7 @@ class CSVParser:
             msg = f"Failed to parse CSV: {e}"
             raise ValueError(msg) from e
 
-    def load_with_mapping(
-        self, file_path: Path, mapping: BankMapping
-    ) -> list[RawTransaction]:
+    def load_with_mapping(self, file_path: Path, mapping: BankMapping) -> list[RawTransaction]:
         """
         Load CSV using a pre-configured bank mapping.
 
@@ -53,9 +51,9 @@ class CSVParser:
         transactions = []
         for idx, row in df.iterrows():
             # Skip rows with missing critical data
-            if pd.isna(
-                row.get(mapping.column_mapping.date_column)
-            ) or pd.isna(row.get(mapping.column_mapping.amount_column)):
+            if pd.isna(row.get(mapping.column_mapping.date_column)) or pd.isna(
+                row.get(mapping.column_mapping.amount_column)
+            ):
                 continue
 
             transactions.append(

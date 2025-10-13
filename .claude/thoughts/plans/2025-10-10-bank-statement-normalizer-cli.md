@@ -62,12 +62,46 @@ budget-tracker process bank1.csv bank2.csv --output results.csv
 
 ## Implementation Approach
 
-Following TDD (Test-Driven Development) methodology:
+Following **STRICT TDD (Test-Driven Development)** methodology with RED-GREEN-REFACTOR cycle:
 
-1. Write failing tests first for each component
-2. Implement minimal code to pass tests
-3. Refactor while keeping tests green
-4. Build incrementally from core data models outward
+### TDD Cycle Discipline
+
+Every feature MUST follow this exact sequence:
+
+1. **🔴 RED Phase**: Write FAILING tests FIRST
+   - Write test specifications before any implementation code
+   - Verify tests fail with expected error messages
+   - **GATE**: Do not proceed until tests fail correctly
+
+2. **✅ GREEN Phase**: Write MINIMAL implementation
+   - Implement only enough code to make tests pass
+   - No extra features or optimizations
+   - **GATE**: Do not proceed until ALL tests pass
+
+3. **♻️ REFACTOR Phase**: Improve code quality
+   - Refactor both implementation and test code
+   - Apply SOLID principles, remove duplication
+   - **GATE**: Tests must remain green throughout refactoring
+
+4. **🔁 ITERATE**: Repeat for next feature
+
+### TDD Validation Checkpoints
+
+After each phase, verify:
+- ✅ All tests written before implementation code
+- ✅ Tests fail for the right reasons (missing implementation, not test bugs)
+- ✅ Implementation is minimal (no speculative features)
+- ✅ All tests pass after implementation
+- ✅ Code quality improves after refactoring
+- ✅ Tests remain green after refactoring
+
+### Anti-Patterns to AVOID
+
+- ❌ Writing implementation before tests
+- ❌ Writing tests that already pass
+- ❌ Skipping the refactor phase
+- ❌ Modifying tests to make them pass
+- ❌ Writing multiple features without tests
 
 **Code Quality Standards:**
 
@@ -94,7 +128,14 @@ Tech stack execution:
 
 ### Overview
 
-Set up the project architecture, dependencies, and core data models with comprehensive test coverage following TDD principles.
+Set up the project architecture, dependencies, and core data models with comprehensive test coverage following **STRICT TDD** principles.
+
+### TDD Cycle for This Phase
+
+This phase follows RED-GREEN-REFACTOR for core data models:
+- 🔴 **RED**: Write failing tests for Transaction and BankMapping models
+- ✅ **GREEN**: Implement minimal models to pass tests
+- ♻️ **REFACTOR**: Improve model design while keeping tests green
 
 ### Changes Required:
 
@@ -219,10 +260,12 @@ check_untyped_defs = true
 strict_equality = true
 ```
 
-#### 3. Core Data Models (TDD)
+#### 3. Core Data Models - TDD Cycle
+
+##### 🔴 RED PHASE: Write Failing Tests First
 
 **File**: `tests/unit/test_models.py`
-**Changes**: Write tests first
+**Action**: Write FAILING tests before any implementation code exists
 
 ```python
 import pytest
@@ -311,8 +354,20 @@ class TestBankMapping:
         assert data["date_format"] == "%Y-%m-%d"
 ```
 
+**🚦 VERIFICATION GATE #1: Confirm Tests Fail Correctly**
+
+Before implementing ANY code, verify:
+- Run: `pytest tests/unit/test_models.py -v`
+- **EXPECTED**: All tests MUST FAIL with ImportError (models don't exist yet)
+- **REASON**: Tests fail because `budget_tracker.models` module doesn't exist
+- **DO NOT PROCEED** until you've confirmed tests fail for the right reasons
+
+##### ✅ GREEN PHASE: Minimal Implementation
+
+Now write MINIMAL code to make tests pass. No extra features!
+
 **File**: `src/budget_tracker/models/transaction.py`
-**Changes**: Implement models to pass tests
+**Action**: Implement ONLY what's needed to pass tests
 
 ```python
 from datetime import date
@@ -381,6 +436,34 @@ class BankMapping(BaseModel):
     class Config:
         frozen = False
 ```
+
+**🚦 VERIFICATION GATE #2: Confirm Tests Pass**
+
+After implementing models, verify:
+- Run: `pytest tests/unit/test_models.py -v`
+- **EXPECTED**: All tests MUST PASS
+- **GATE**: Do not proceed until ALL tests pass with 100% success rate
+- Run type check: `mypy src/budget_tracker/models/ --strict`
+- Run linter: `ruff check src/budget_tracker/models/`
+
+##### ♻️ REFACTOR PHASE: Improve Code Quality
+
+Now that tests are green, refactor for quality. Tests MUST stay green!
+
+**Actions**:
+1. Review model design - is it following SOLID principles?
+2. Check for code duplication - can validators be extracted?
+3. Improve docstrings and type hints clarity
+4. Run tests after EACH refactoring change
+5. Ensure `mypy --strict` and `ruff` still pass
+
+**🚦 VERIFICATION GATE #3: Tests Still Green After Refactoring**
+
+- Run: `pytest tests/unit/test_models.py -v`
+- **EXPECTED**: All tests MUST STILL PASS
+- **CRITICAL**: If any test fails, rollback refactoring and fix
+- Quality checks: `mypy src/budget_tracker/models/ --strict` (must pass)
+- Quality checks: `ruff check src/budget_tracker/models/` (must pass)
 
 #### 4. Categories Configuration
 
@@ -554,13 +637,29 @@ Make executable: `chmod +x scripts/check_quality.sh`
 
 ### Success Criteria:
 
+#### TDD Validation Checkpoints (CRITICAL):
+
+**🔴 RED Phase Validation:**
+- [x] Tests were written BEFORE implementation code
+- [x] Tests failed initially with ImportError/AttributeError
+- [x] Test failures were for correct reasons (missing code, not test bugs)
+
+**✅ GREEN Phase Validation:**
+- [x] All tests pass: `pytest tests/unit/test_models.py -v`
+- [x] Implementation is minimal (no speculative features added)
+- [x] Type checking passes: `mypy src/budget_tracker/models/ --strict`
+- [x] Linting passes: `ruff check src/budget_tracker/models/`
+
+**♻️ REFACTOR Phase Validation:**
+- [x] Tests still pass after refactoring
+- [x] Code quality improved (no duplication, clear names)
+- [x] Type checking still passes: `mypy src/ --strict`
+- [x] Linting still passes: `ruff check src/`
+
 #### Automated Verification:
 
 - [x] Project structure created successfully
 - [x] Dependencies install without errors: `uv sync --group dev`
-- [x] All model tests pass: `pytest tests/unit/test_models.py -v`
-- [x] **Type checking passes with strict mode: `mypy src/ --strict`**
-- [x] **Linting passes with zero errors: `ruff check src/`**
 - [x] **Code formatting is correct: `ruff format src/ --check`**
 - [x] **Quality check script runs successfully: `./scripts/check_quality.sh`**
 - [x] Can import models: `python -c "from budget_tracker.models.transaction import StandardTransaction"`
@@ -1176,12 +1275,12 @@ class BatchNormalizer:
 
 #### Automated Verification:
 
-- [ ] All normalizer tests pass: `pytest tests/unit/test_normalizer.py -v`
-- [ ] Date parsing handles multiple formats correctly
-- [ ] Amount parsing handles comma and dot decimal separators
-- [ ] Invalid transactions are skipped gracefully
-- [ ] **Type checking passes with strict mode: `mypy src/budget_tracker/normalizer/ --strict`**
-- [ ] **Linting passes with zero errors: `ruff check src/budget_tracker/normalizer/`**
+- [x] All normalizer tests pass: `pytest tests/unit/test_normalizer.py -v`
+- [x] Date parsing handles multiple formats correctly
+- [x] Amount parsing handles comma and dot decimal separators
+- [x] Invalid transactions are skipped gracefully
+- [x] **Type checking passes with strict mode: `mypy src/budget_tracker/normalizer/ --strict`**
+- [x] **Linting passes with zero errors: `ruff check src/budget_tracker/normalizer/`**
 
 #### Manual Verification:
 
@@ -2431,6 +2530,186 @@ class TestEndToEnd:
 - [ ] Output CSV is correctly formatted
 - [ ] Summary statistics are accurate
 - [ ] Can process multiple files and combine them
+
+---
+
+## TDD Discipline Enforcement & Failure Recovery
+
+### When TDD Discipline is Broken
+
+If you realize you've violated TDD principles, **STOP IMMEDIATELY** and follow this recovery procedure:
+
+#### Violation Detection
+
+**Signs you've broken TDD discipline:**
+- ❌ Wrote implementation code before tests
+- ❌ Tests pass immediately without seeing them fail first
+- ❌ Modified tests to make them pass (test-to-fit-code)
+- ❌ Skipped the refactor phase
+- ❌ Added "just one more feature" without a test
+
+####  Recovery Protocol
+
+**Step 1: STOP and Assess**
+1. Identify which phase was violated (RED, GREEN, or REFACTOR)
+2. Document what code was written out of order
+3. Determine blast radius (how much code is affected)
+
+**Step 2: Rollback Strategy**
+
+**Option A - Full Rollback (Recommended for major violations):**
+```bash
+# Rollback to last valid TDD state
+git status
+git diff  # Review changes
+git checkout -- <files>  # Discard changes
+# OR
+git reset --hard HEAD  # Nuclear option: discard all changes
+```
+
+**Option B - Surgical Fix (For minor violations):**
+1. **If implementation was written first:**
+   - Delete or comment out the implementation code
+   - Write the test first
+   - Verify test fails correctly
+   - Re-implement minimal code to pass test
+
+2. **If test was modified to pass:**
+   - Restore original test
+   - Fix implementation to pass original test
+   - If test was wrong, delete implementation and restart TDD cycle
+
+3. **If refactoring was skipped:**
+   - Commit current working code
+   - Perform refactoring
+   - Verify tests remain green after each change
+
+**Step 3: Resume TDD Cycle**
+1. Return to proper phase (usually RED)
+2. Follow strict RED-GREEN-REFACTOR sequence
+3. Document the lesson learned
+
+### TDD Violation Examples & Fixes
+
+#### Example 1: Implementation Before Test
+
+**Violation:**
+```python
+# ❌ WRONG: Wrote implementation first
+class UserService:
+    def create_user(self, name: str) -> User:
+        return User(name=name, id=generate_id())
+```
+
+**Recovery:**
+```python
+# 1. Delete or comment implementation
+# 2. Write test FIRST
+def test_create_user():
+    service = UserService()
+    user = service.create_user("Alice")
+    assert user.name == "Alice"
+    assert user.id is not None
+
+# 3. Run test - should FAIL (ImportError/AttributeError)
+# 4. NOW implement minimal code
+# 5. Run test - should PASS
+# 6. Refactor if needed
+```
+
+#### Example 2: Test Modified to Fit Code
+
+**Violation:**
+```python
+# ❌ WRONG: Changed test assertion to match buggy implementation
+def test_calculate_total():
+    result = calculate_total([10, 20, 30])
+    # Changed from assert result == 60 to:
+    assert result == 59  # Made test pass by changing expectation!
+```
+
+**Recovery:**
+```python
+# 1. Restore original test
+def test_calculate_total():
+    result = calculate_total([10, 20, 30])
+    assert result == 60  # Original correct expectation
+
+# 2. Fix implementation to pass test
+def calculate_total(items):
+    return sum(items)  # Was: return sum(items) - 1
+
+# 3. Verify test passes with correct implementation
+```
+
+#### Example 3: Skipped Refactor Phase
+
+**Violation:**
+```python
+# ❌ WRONG: Left code in messy state after making tests pass
+def process_transaction(t):
+    if t['type'] == 'credit': return t['amount']
+    elif t['type'] == 'debit': return -t['amount']
+    else: return 0
+```
+
+**Recovery:**
+```python
+# 1. Ensure tests are passing
+# 2. Refactor for clarity
+def process_transaction(transaction: dict) -> Decimal:
+    transaction_type = transaction.get('type')
+    amount = Decimal(transaction.get('amount', 0))
+
+    if transaction_type == 'credit':
+        return amount
+    elif transaction_type == 'debit':
+        return -amount
+    return Decimal(0)
+
+# 3. Run tests after refactoring - must still pass
+# 4. Check code quality tools still pass
+```
+
+### Preventing TDD Violations
+
+**Pre-Code Checklist:**
+- [ ] Have I written the test first?
+- [ ] Have I seen the test fail?
+- [ ] Am I implementing ONLY what's needed to pass the test?
+- [ ] Am I planning to refactor after tests pass?
+
+**Post-Code Checklist:**
+- [ ] Did tests fail first (RED)?
+- [ ] Do all tests now pass (GREEN)?
+- [ ] Have I refactored the code (REFACTOR)?
+- [ ] Do tests still pass after refactoring?
+- [ ] Does the code meet quality standards?
+
+### TDD Metrics & Monitoring
+
+Track these metrics to ensure TDD discipline:
+- **Test-First Ratio**: % of code written after tests (Goal: 100%)
+- **Red-Green-Refactor Cycles**: Number of complete cycles per feature
+- **Test Modification Rate**: % of tests changed after initially writing (Goal: <5%)
+- **Refactoring Frequency**: Number of refactorings per feature (Goal: >1)
+
+### Emergency Procedures
+
+**If you're completely stuck:**
+1. **STOP coding**
+2. Review the current phase you're in
+3. Check all gates have been passed
+4. Read the test requirements again
+5. Start over with a simpler test if needed
+6. **Ask for help** - pair programming is TDD-friendly
+
+**If tests are flaky:**
+1. Identify non-deterministic behavior
+2. Isolate the problematic test
+3. Fix test isolation issues (shared state, timing, external dependencies)
+4. Never ignore or skip flaky tests
+5. Make tests deterministic before proceeding
 
 ---
 
