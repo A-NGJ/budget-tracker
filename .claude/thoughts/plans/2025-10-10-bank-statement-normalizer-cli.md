@@ -2008,13 +2008,13 @@ def confirm_uncertain_categories(
 
 #### Automated Verification:
 
-- [ ] LLM categorizer tests pass: `pytest tests/unit/test_categorizer.py -v`
-- [ ] Can connect to Ollama: Test with `ollama list`
-- [ ] Prompt construction includes all categories
-- [ ] Confidence thresholds work correctly
-- [ ] Fallback to "Other" works on errors
-- [ ] **Type checking passes with strict mode: `mypy src/budget_tracker/categorizer/ --strict`**
-- [ ] **Linting passes with zero errors: `ruff check src/budget_tracker/categorizer/`**
+- [x] LLM categorizer tests pass: `pytest tests/unit/test_categorizer.py -v`
+- [x] Can connect to Ollama: Test with `ollama list`
+- [x] Prompt construction includes all categories
+- [x] Confidence thresholds work correctly
+- [x] Fallback to "Other" works on errors
+- [x] **Type checking passes with strict mode: `mypy src/budget_tracker/categorizer/ --strict`**
+- [x] **Linting passes with zero errors: `ruff check src/budget_tracker/categorizer/`**
 
 #### Manual Verification:
 
