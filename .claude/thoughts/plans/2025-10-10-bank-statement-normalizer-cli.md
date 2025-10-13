@@ -2262,13 +2262,13 @@ def print_summary(transactions: List[StandardTransaction]):
 
 #### Automated Verification:
 
-- [ ] Exporter tests pass: `pytest tests/unit/test_exporter.py -v`
-- [ ] CSV output has correct columns in correct order
-- [ ] Dates are formatted as YYYY-MM-DD
-- [ ] Transactions are sorted by date
-- [ ] Multiple sources combine correctly
-- [ ] **Type checking passes with strict mode: `mypy src/budget_tracker/exporters/ --strict`**
-- [ ] **Linting passes with zero errors: `ruff check src/budget_tracker/exporters/`**
+- [x] Exporter tests pass: `pytest tests/unit/test_exporter.py -v`
+- [x] CSV output has correct columns in correct order
+- [x] Dates are formatted as YYYY-MM-DD
+- [x] Transactions are sorted by date
+- [x] Multiple sources combine correctly
+- [x] **Type checking passes with strict mode: `mypy src/budget_tracker/exporters/ --strict`**
+- [x] **Linting passes with zero errors: `ruff check src/budget_tracker/exporters/`**
 
 #### Manual Verification:
 
