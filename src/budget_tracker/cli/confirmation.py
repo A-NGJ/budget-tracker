@@ -37,9 +37,7 @@ def confirm_uncertain_categories(
             f"(confidence: {transaction.confidence:.0%})[/dim]"
         )
 
-        choice = Prompt.ask(
-            "Accept suggestion?", choices=["y", "n", "s"], default="y"
-        )
+        choice = Prompt.ask("Accept suggestion?", choices=["y", "n", "s"], default="y")
 
         if choice == "y":
             continue  # Keep suggested category

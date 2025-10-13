@@ -10,9 +10,7 @@ from budget_tracker.models.bank_mapping import BankMapping, ColumnMapping
 console = Console()
 
 
-def interactive_column_mapping(
-    file_path: Path, available_columns: list[str]
-) -> BankMapping | None:
+def interactive_column_mapping(file_path: Path, available_columns: list[str]) -> BankMapping | None:
     """
     Guide user through interactive column mapping.
 
@@ -28,19 +26,13 @@ def interactive_column_mapping(
     )
 
     # Date column
-    date_col = Prompt.ask(
-        "Which column contains the transaction date?", choices=available_columns
-    )
+    date_col = Prompt.ask("Which column contains the transaction date?", choices=available_columns)
 
     # Amount column
-    amount_col = Prompt.ask(
-        "Which column contains the amount?", choices=available_columns
-    )
+    amount_col = Prompt.ask("Which column contains the amount?", choices=available_columns)
 
     # Description column
-    desc_col = Prompt.ask(
-        "Which column contains the description/text?", choices=available_columns
-    )
+    desc_col = Prompt.ask("Which column contains the description/text?", choices=available_columns)
 
     # Currency handling
     console.print("\n[bold]Currency Configuration[/bold]")

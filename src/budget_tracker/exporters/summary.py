@@ -38,9 +38,7 @@ def print_summary(transactions: list[StandardTransaction]) -> None:
         table.add_column("Category", style="cyan")
         table.add_column("Amount (DKK)", justify="right", style="magenta")
 
-        for category, amount in sorted(
-            by_category.items(), key=lambda x: x[1], reverse=True
-        ):
+        for category, amount in sorted(by_category.items(), key=lambda x: x[1], reverse=True):
             table.add_row(category, f"{amount:.2f}")
 
         console.print(table)

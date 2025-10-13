@@ -18,9 +18,7 @@ class ExchangeRateProvider:
     def __init__(self) -> None:
         self._cache: dict[tuple[str, str, date], Decimal] = {}
 
-    def get_rate(
-        self, from_currency: str, to_currency: str, transaction_date: date
-    ) -> Decimal:
+    def get_rate(self, from_currency: str, to_currency: str, transaction_date: date) -> Decimal:
         """
         Get exchange rate for a specific date.
 

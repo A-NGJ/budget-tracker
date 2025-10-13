@@ -125,6 +125,4 @@ Choose the most specific subcategory possible. If description is unclear, use \
             return CategoryResult(**data)
         except (json.JSONDecodeError, KeyError):
             # Fallback if parsing fails
-            return CategoryResult(
-                category="Other", subcategory="Uncategorized", confidence=0.0
-            )
+            return CategoryResult(category="Other", subcategory="Uncategorized", confidence=0.0)

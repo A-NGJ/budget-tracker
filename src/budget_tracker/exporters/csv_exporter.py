@@ -13,9 +13,7 @@ class CSVExporter:
         self.output_dir = output_dir or settings.output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-    def export(
-        self, transactions: list[StandardTransaction], output_file: Path
-    ) -> Path:
+    def export(self, transactions: list[StandardTransaction], output_file: Path) -> Path:
         """
         Export transactions to standardized CSV.
 
@@ -31,8 +29,7 @@ class CSVExporter:
         for t in transactions:
             row = {
                 "Date": t.date.strftime("%Y-%m-%d"),
-                "Category": f"{t.category}"
-                + (f"/{t.subcategory}" if t.subcategory else ""),
+                "Category": f"{t.category}" + (f"/{t.subcategory}" if t.subcategory else ""),
                 "Amount (DKK)": float(t.amount),
                 "Source": t.source,
             }

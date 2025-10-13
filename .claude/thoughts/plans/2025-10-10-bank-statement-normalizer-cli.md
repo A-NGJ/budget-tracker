@@ -2514,13 +2514,13 @@ class TestEndToEnd:
 
 #### Automated Verification:
 
-- [ ] CLI installs correctly: `pip install -e .`
-- [ ] Help text displays: `budget-tracker --help`
-- [ ] Integration tests pass: `pytest tests/integration/ -v`
+- [x] CLI installs correctly: `pip install -e .`
+- [x] Help text displays: `budget-tracker --help`
+- [x] Integration tests pass: `pytest tests/integration/ -v`
 - [ ] Can run with test CSV: `budget-tracker process tests/fixtures/sample_bank1.csv`
-- [ ] **All type checking passes: `mypy src/ --strict`**
-- [ ] **All linting passes: `ruff check src/`**
-- [ ] **All code is properly formatted: `ruff format src/`**
+- [x] **All type checking passes: `mypy src/ --strict`**
+- [x] **All linting passes: `ruff check src/`**
+- [x] **All code is properly formatted: `ruff format src/`**
 
 #### Manual Verification:
 
