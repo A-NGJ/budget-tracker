@@ -1,9 +1,11 @@
-import pytest
 from datetime import date
 from decimal import Decimal
-from budget_tracker.normalizer.transformer import TransactionNormalizer
-from budget_tracker.models.transaction import RawTransaction, StandardTransaction
+
+import pytest
+
 from budget_tracker.models.bank_mapping import BankMapping, ColumnMapping
+from budget_tracker.models.transaction import RawTransaction, StandardTransaction
+from budget_tracker.normalizer.transformer import TransactionNormalizer
 
 
 class TestTransactionNormalizer:

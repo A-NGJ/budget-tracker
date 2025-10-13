@@ -1,9 +1,11 @@
-import pytest
 from datetime import date
 from decimal import Decimal
-from unittest.mock import Mock, patch
-from budget_tracker.currency.exchange_rate_provider import ExchangeRateProvider
+from unittest.mock import patch
+
+import pytest
+
 from budget_tracker.currency.converter import CurrencyConverter
+from budget_tracker.currency.exchange_rate_provider import ExchangeRateProvider
 
 
 class TestExchangeRateProvider:
@@ -33,9 +35,7 @@ class TestExchangeRateProvider:
         rate = provider.get_rate("DKK", "DKK", date(2025, 10, 10))
         assert rate == Decimal("1.0")
 
-    def test_cache_rate_to_avoid_repeated_calls(
-        self, provider: ExchangeRateProvider
-    ) -> None:
+    def test_cache_rate_to_avoid_repeated_calls(self, provider: ExchangeRateProvider) -> None:
         """Test that rates are cached to avoid redundant API calls"""
         mock_response = {
             "amount": 1.0,

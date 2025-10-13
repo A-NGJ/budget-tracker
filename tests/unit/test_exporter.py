@@ -1,8 +1,10 @@
-import pytest
-from pathlib import Path
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
+
 import pandas as pd
+import pytest
+
 from budget_tracker.exporters.csv_exporter import CSVExporter
 from budget_tracker.models.transaction import StandardTransaction
 
@@ -80,9 +82,7 @@ class TestCSVExporter:
         df = pd.read_csv(output_file)
         assert df.iloc[0]["Date"] == "2025-10-10"
 
-    def test_combine_multiple_sources(
-        self, exporter: CSVExporter, tmp_path: Path
-    ) -> None:
+    def test_combine_multiple_sources(self, exporter: CSVExporter, tmp_path: Path) -> None:
         """Test combining transactions from multiple banks"""
         transactions = [
             StandardTransaction(

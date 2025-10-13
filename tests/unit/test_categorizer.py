@@ -1,6 +1,8 @@
-import pytest
 from unittest.mock import Mock, patch
-from budget_tracker.categorizer.llm_categorizer import LLMCategorizer, CategoryResult
+
+import pytest
+
+from budget_tracker.categorizer.llm_categorizer import CategoryResult, LLMCategorizer
 from budget_tracker.config.settings import settings
 
 
