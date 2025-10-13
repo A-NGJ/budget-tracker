@@ -1,12 +1,16 @@
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
+from budget_tracker.currency.converter import CurrencyConverter
 from budget_tracker.models.bank_mapping import BankMapping
 from budget_tracker.models.transaction import RawTransaction, StandardTransaction
 
 
 class TransactionNormalizer:
     """Transform raw CSV data into standardized format"""
+
+    def __init__(self) -> None:
+        self.currency_converter = CurrencyConverter()
 
     def normalize(
         self,
@@ -34,9 +38,21 @@ class TransactionNormalizer:
                 return None
             amount = self._parse_amount(amount_str, mapping.decimal_separator)
 
-            # Currency conversion will be added in Phase 3.5
-            # For now, we assume all amounts are already in the correct currency
-            # TODO: Integrate currency converter in Phase 3.5
+            # Determine currency and convert to DKK
+            if mapping.column_mapping.currency_column:
+                currency = raw.data.get(
+                    mapping.column_mapping.currency_column, mapping.default_currency
+                )
+            else:
+                currency = mapping.default_currency
+
+            # Convert to DKK if needed
+            amount_dkk = self.currency_converter.convert(
+                amount=amount,
+                from_currency=currency.upper(),
+                to_currency="DKK",
+                transaction_date=parsed_date,
+            )
 
             # Get description
             description = raw.data.get(mapping.column_mapping.description_column, "")
@@ -45,7 +61,7 @@ class TransactionNormalizer:
                 date=parsed_date,
                 category=category,
                 subcategory=subcategory,
-                amount=amount,
+                amount=amount_dkk,
                 source=mapping.bank_name,
                 description=description,
                 confidence=confidence,

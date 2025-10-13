@@ -42,6 +42,46 @@ def interactive_column_mapping(
         "Which column contains the description/text?", choices=available_columns
     )
 
+    # Currency handling
+    console.print("\n[bold]Currency Configuration[/bold]")
+    has_currency_column = Prompt.ask(
+        "Does the CSV have a currency column?", choices=["y", "n"], default="n"
+    )
+
+    currency_col = None
+    default_currency = "DKK"
+
+    if has_currency_column == "y":
+        currency_col = Prompt.ask(
+            "Which column contains the currency code?", choices=available_columns
+        )
+    else:
+        # Ask for default currency
+        console.print("\nCommon currencies:")
+        console.print("  1. DKK (Danish Krone)")
+        console.print("  2. EUR (Euro)")
+        console.print("  3. USD (US Dollar)")
+        console.print("  4. GBP (British Pound)")
+        console.print("  5. SEK (Swedish Krona)")
+        console.print("  6. NOK (Norwegian Krone)")
+        console.print("  7. Other")
+
+        currency_choice = Prompt.ask("Select currency", default="1")
+
+        currency_map = {
+            "1": "DKK",
+            "2": "EUR",
+            "3": "USD",
+            "4": "GBP",
+            "5": "SEK",
+            "6": "NOK",
+        }
+
+        if currency_choice == "7":
+            default_currency = Prompt.ask("Enter currency code (e.g., CHF, JPY)")
+        else:
+            default_currency = currency_map.get(currency_choice, "DKK")
+
     # Date format - use default from settings
     date_format = settings.default_date_format
     console.print("\n[dim]Using date format: DD-MM-YYYY[/dim]")
@@ -50,9 +90,13 @@ def interactive_column_mapping(
     mapping = BankMapping(
         bank_name=bank_name,
         column_mapping=ColumnMapping(
-            date_column=date_col, amount_column=amount_col, description_column=desc_col
+            date_column=date_col,
+            amount_column=amount_col,
+            description_column=desc_col,
+            currency_column=currency_col,
         ),
         date_format=date_format,
+        default_currency=default_currency,
     )
 
     # Confirm
@@ -61,6 +105,7 @@ def interactive_column_mapping(
     console.print(f"  Date: {date_col} (format: {date_format})")
     console.print(f"  Amount: {amount_col}")
     console.print(f"  Description: {desc_col}")
+    console.print(f"  Currency: {currency_col or default_currency}")
 
     save = Prompt.ask("\nSave this mapping?", choices=["y", "n"], default="y")
 

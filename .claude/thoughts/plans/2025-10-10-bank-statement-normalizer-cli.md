@@ -1713,13 +1713,13 @@ class TransactionNormalizer:
 
 #### Automated Verification:
 
-- [ ] Currency converter tests pass: `pytest tests/unit/test_currency_converter.py -v`
-- [ ] Can fetch exchange rates from Frankfurter API
-- [ ] Rate caching works correctly
-- [ ] Currency conversion maintains decimal precision
-- [ ] DKK to DKK conversion returns original amount
-- [ ] **Type checking passes with strict mode: `mypy src/budget_tracker/currency/ --strict`**
-- [ ] **Linting passes with zero errors: `ruff check src/budget_tracker/currency/`**
+- [x] Currency converter tests pass: `pytest tests/unit/test_currency_converter.py -v`
+- [x] Can fetch exchange rates from Frankfurter API
+- [x] Rate caching works correctly
+- [x] Currency conversion maintains decimal precision
+- [x] DKK to DKK conversion returns original amount
+- [x] **Type checking passes with strict mode: `mypy src/budget_tracker/currency/ --strict`**
+- [x] **Linting passes with zero errors: `ruff check src/budget_tracker/currency/`**
 
 #### Manual Verification:
 
