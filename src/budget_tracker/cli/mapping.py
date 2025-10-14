@@ -78,6 +78,15 @@ def interactive_column_mapping(file_path: Path, available_columns: list[str]) ->
     date_format = settings.default_date_format
     console.print("\n[dim]Using date format: DD-MM-YYYY[/dim]")
 
+    # Decimal separator
+    console.print("\n[bold]Decimal Separator Configuration[/bold]")
+    console.print("What character is used for decimal separation?")
+    console.print("  1. . (dot/period) - e.g., 1234.56")
+    console.print("  2. , (comma) - e.g., 1234,56")
+
+    decimal_choice = Prompt.ask("Select decimal separator", choices=["1", "2"], default="1")
+    decimal_separator = "." if decimal_choice == "1" else ","
+
     # Create mapping
     mapping = BankMapping(
         bank_name=bank_name,
@@ -89,6 +98,7 @@ def interactive_column_mapping(file_path: Path, available_columns: list[str]) ->
         ),
         date_format=date_format,
         default_currency=default_currency,
+        decimal_separator=decimal_separator,
     )
 
     # Confirm
@@ -98,6 +108,7 @@ def interactive_column_mapping(file_path: Path, available_columns: list[str]) ->
     console.print(f"  Amount: {amount_col}")
     console.print(f"  Description: {desc_col}")
     console.print(f"  Currency: {currency_col or default_currency}")
+    console.print(f"  Decimal separator: {decimal_separator}")
 
     save = Prompt.ask("\nSave this mapping?", choices=["y", "n"], default="y")
 
