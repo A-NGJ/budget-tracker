@@ -7,7 +7,7 @@ from budget_tracker.parsers.csv_parser import CSVParser, detect_delimiter
 
 
 @pytest.fixture
-def sample_csv(tmp_path: Path) -> Path:
+def sample_csv_dot_decimal_delimiter(tmp_path: Path) -> Path:
     """Create a sample CSV file for testing"""
     csv_content = """Dato,Beløb,Tekst
 10-10-2025,125.50,Cafe X
@@ -17,31 +17,39 @@ def sample_csv(tmp_path: Path) -> Path:
     return csv_file
 
 
+@pytest.fixture
+def sample_csv_comma_decimal_delimiter(tmp_path: Path) -> Path:
+    """Create a sample CSV file with semicolon delimiter and comma decimal separator"""
+    csv_content = """Date;Amount;Description
+2025-10-10;125,50;Purchase
+2025-10-11;-50,00;Refund
+2025-10-12;1.115,25;Grocery"""
+    csv_file = tmp_path / "test_bank_comma.csv"
+    csv_file.write_text(csv_content)
+    return csv_file
+
+
 class TestCSVParser:
-    def test_detect_delimiter_comma(self, sample_csv: Path) -> None:
+    def test_detect_delimiter_comma(self, sample_csv_dot_decimal_delimiter: Path) -> None:
         """Test delimiter detection for comma-separated files"""
-        delimiter = detect_delimiter(sample_csv)
+        delimiter = detect_delimiter(sample_csv_dot_decimal_delimiter)
         assert delimiter == ","
 
-    def test_detect_delimiter_semicolon(self, tmp_path: Path) -> None:
+    def test_detect_delimiter_semicolon(self, sample_csv_comma_decimal_delimiter: Path) -> None:
         """Test delimiter detection for semicolon-separated files"""
-        csv_content = """Date;Amount;Description
-2025-10-10;125.50;Purchase"""
-        csv_file = tmp_path / "semicolon.csv"
-        csv_file.write_text(csv_content)
-        delimiter = detect_delimiter(csv_file)
+        delimiter = detect_delimiter(sample_csv_comma_decimal_delimiter)
         assert delimiter == ";"
 
-    def test_parse_csv_without_mapping(self, sample_csv: Path) -> None:
+    def test_parse_csv_without_mapping(self, sample_csv_dot_decimal_delimiter: Path) -> None:
         """Test parsing CSV and detecting columns"""
         parser = CSVParser()
-        df, columns = parser.parse_file(sample_csv)
+        df, columns = parser.parse_file(sample_csv_dot_decimal_delimiter)
         assert len(df) == 2
         assert "Dato" in columns
         assert "Beløb" in columns
         assert "Tekst" in columns
 
-    def test_load_with_mapping(self, sample_csv: Path) -> None:
+    def test_load_with_mapping(self, sample_csv_dot_decimal_delimiter: Path) -> None:
         """Test loading CSV with pre-configured mapping"""
         mapping = BankMapping(
             bank_name="Test Bank",
@@ -51,9 +59,17 @@ class TestCSVParser:
             date_format="%d-%m-%Y",
         )
         parser = CSVParser()
-        raw_transactions = parser.load_with_mapping(sample_csv, mapping)
-        assert len(raw_transactions) == 2
-        assert raw_transactions[0].data["Dato"] == "10-10-2025"
+        parsed_transactions = parser.load_with_mapping(sample_csv_dot_decimal_delimiter, mapping)
+        assert len(parsed_transactions) == 2
+        # Check parsed fields
+        from datetime import date  # noqa: PLC0415
+        from decimal import Decimal  # noqa: PLC0415
+
+        assert parsed_transactions[0].date == date(2025, 10, 10)
+        assert parsed_transactions[0].amount == Decimal("125.50")
+        assert parsed_transactions[0].description == "Cafe X"
+        assert parsed_transactions[0].source == "Test Bank"
+        assert parsed_transactions[0].currency == "DKK"  # default currency
 
     def test_handle_malformed_csv(self, tmp_path: Path) -> None:
         """Test graceful handling of malformed CSV"""
@@ -68,4 +84,3 @@ class TestInteractiveMapping:
     def test_create_mapping_from_user_input(self) -> None:
         """Test creating mapping from simulated user selections"""
         # This will be implemented with Typer prompts
-        pass

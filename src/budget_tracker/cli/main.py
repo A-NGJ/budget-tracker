@@ -5,15 +5,16 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
-from budget_tracker.categorizer.llm_categorizer import CategoryResult, LLMCategorizer
+from budget_tracker.categorizer.llm_categorizer import LLMCategorizer
 from budget_tracker.cli.confirmation import confirm_uncertain_categories
 from budget_tracker.cli.mapping import interactive_column_mapping, load_mapping, save_mapping
 from budget_tracker.config.settings import settings
+from budget_tracker.currency.converter import CurrencyConverter
 from budget_tracker.exporters.csv_exporter import CSVExporter
 from budget_tracker.exporters.summary import print_summary
-from budget_tracker.models.transaction import RawTransaction  # noqa: TC001
-from budget_tracker.normalizer.batch_processor import BatchNormalizer
-from budget_tracker.parsers.csv_parser import CSVParser
+from budget_tracker.models.transaction import StandardTransaction
+from budget_tracker.parsers.csv_parser import CSVParser, ParsedTransaction
+from budget_tracker.utils.ollama import is_ollama_running
 
 app = typer.Typer(help="Bank Statement Normalizer - Standardize and categorize your transactions")
 console = Console()
@@ -35,6 +36,10 @@ def process(
     """
     console.print("[bold]Budget Tracker - Bank Statement Normalizer[/bold]\n")
 
+    if not is_ollama_running():
+        console.print("[red]✗[/red] Ollama server is not running. Please start it and try again.")
+        raise typer.Exit(1)
+
     # Ensure directories exist
     settings.ensure_directories()
 
@@ -46,9 +51,9 @@ def process(
 
     console.print(f"Processing {len(files)} file(s)...")
 
-    # Step 1: Parse and map columns
+    # Step 1: Parse CSV files with column mapping
     parser = CSVParser()
-    all_raw_transactions: list[RawTransaction] = []
+    all_parsed_transactions: list[ParsedTransaction] = []
 
     for file in files:
         console.print(f"\n[cyan]Processing:[/cyan] {file.name}")
@@ -70,50 +75,49 @@ def process(
         else:
             console.print(f"[green]✓[/green] Using saved mapping for {mapping.bank_name}")
 
-        # Parse with mapping
-        raw_transactions = parser.load_with_mapping(file, mapping)
-        console.print(f"[green]✓[/green] Loaded {len(raw_transactions)} transactions")
-        all_raw_transactions.extend(raw_transactions)
+        # Parse and extract all fields with mapping
+        parsed_transactions = parser.load_with_mapping(file, mapping)
+        console.print(f"[green]✓[/green] Loaded {len(parsed_transactions)} transactions")
+        all_parsed_transactions.extend(parsed_transactions)
 
-    # Step 2: Categorize with LLM
+    # Step 2: Categorize with LLM and create StandardTransactions
     console.print("\n[cyan]Categorizing transactions with local LLM...[/cyan]")
     categorizer = LLMCategorizer()
+    currency_converter = CurrencyConverter()
 
-    categorized_transactions: list[CategoryResult] = []
-    for raw in all_raw_transactions:
-        # Get description for categorization
-        desc = raw.data.get("description", "")
-        result = categorizer.categorize(desc)
+    standardized: list[StandardTransaction] = []
+    for parsed in all_parsed_transactions:
+        # Categorize using description
+        categorized = categorizer.categorize(parsed.description)
 
-        # Create standardized transaction (will be normalized in next step)
-        # For now, store category info
-        categorized_transactions.append(result)
+        # Convert currency to DKK
+        amount_dkk = currency_converter.convert(
+            amount=parsed.amount,
+            from_currency=parsed.currency,
+            to_currency="DKK",
+            transaction_date=parsed.date,
+        )
 
-    console.print(f"[green]✓[/green] Categorized {len(all_raw_transactions)} transactions")
-
-    # Step 3: Normalize
-    console.print("\n[cyan]Normalizing data...[/cyan]")
-    normalizer = BatchNormalizer()
-
-    standardized = []
-    for raw, categorized in zip(all_raw_transactions, categorized_transactions, strict=True):
-        # Find the mapping used for this transaction
-        mapping = load_mapping(Path(raw.source_file).stem, settings.mappings_file)
-        if mapping:
-            std = normalizer.normalizer.normalize(
-                raw,
-                mapping,
+        # Create standardized transaction
+        standardized.append(
+            StandardTransaction(
+                date=parsed.date,
                 category=categorized.category,
                 subcategory=categorized.subcategory,
+                amount=amount_dkk,
+                source=parsed.source,
+                description=parsed.description,
                 confidence=categorized.confidence,
             )
-            if std:
-                standardized.append(std)
+        )
 
-    console.print(f"[green]✓[/green] Normalized {len(standardized)} transactions")
+    console.print(f"[green]✓[/green] Categorized and normalized {len(standardized)} transactions")
 
     # Step 4: Confirm uncertain categories
     standardized = confirm_uncertain_categories(standardized)
+    if not standardized:
+        console.print("[red]No transactions to export, exiting...[/red]")
+        raise typer.Exit(1)
 
     # Step 5: Export
     output_file = output or (settings.output_dir / settings.default_output_filename)

@@ -1,9 +1,8 @@
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 from budget_tracker.categorizer.llm_categorizer import CategoryResult, LLMCategorizer
-from budget_tracker.config.settings import settings
 
 
 class TestLLMCategorizer:
@@ -14,7 +13,7 @@ class TestLLMCategorizer:
     @pytest.fixture
     def mock_ollama_response(self) -> dict[str, str]:
         return {
-            "response": '{"category": "Food & Drinks", "subcategory": "Restaurants", "confidence": 0.95}'
+            "response": '{"category": "Food & Drinks", "subcategory": "Restaurants", "confidence": 0.95}'  # noqa: E501
         }
 
     def test_categorize_transaction(
@@ -48,7 +47,7 @@ class TestLLMCategorizer:
         """Test that prompt includes available categories"""
         with patch("ollama.generate") as mock_generate:
             mock_generate.return_value = {
-                "response": '{"category": "Food & Drinks", "subcategory": "Restaurants", "confidence": 0.9}'
+                "response": '{"category": "Food & Drinks", "subcategory": "Restaurants", "confidence": 0.9}'  # noqa: E501
             }
             categorizer.categorize("Test transaction")
             # Verify prompt was constructed correctly
@@ -63,13 +62,13 @@ class TestLLMCategorizer:
         with patch("ollama.generate") as mock_generate:
             mock_generate.side_effect = [
                 {
-                    "response": '{"category": "Food & Drinks", "subcategory": "Restaurants", "confidence": 0.9}'
+                    "response": '{"category": "Food & Drinks", "subcategory": "Restaurants", "confidence": 0.9}'  # noqa: E501
                 },
                 {
-                    "response": '{"category": "Transportation", "subcategory": "Public Transport", "confidence": 0.95}'
+                    "response": '{"category": "Transportation", "subcategory": "Public Transport", "confidence": 0.95}'  # noqa: E501
                 },
                 {
-                    "response": '{"category": "Food & Drinks", "subcategory": "Groceries", "confidence": 0.85}'
+                    "response": '{"category": "Food & Drinks", "subcategory": "Groceries", "confidence": 0.85}'  # noqa: E501
                 },
             ]
             results = categorizer.categorize_batch(descriptions)

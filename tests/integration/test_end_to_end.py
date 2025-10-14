@@ -71,7 +71,7 @@ class TestEndToEnd:
         mappings_file = config_dir / "bank_mappings.json"
 
         # Monkeypatch settings to use temp directory
-        from budget_tracker.config import settings as settings_module
+        from budget_tracker.config import settings as settings_module  # noqa: PLC0415
 
         monkeypatch.setattr(settings_module.settings, "mappings_file", mappings_file)
 
@@ -80,11 +80,11 @@ class TestEndToEnd:
         assert "No saved mappings found" in result.output
 
     def test_list_mappings_with_data(
-        self, tmp_path: Path, sample_mapping: Path, monkeypatch: pytest.MonkeyPatch
+        self, sample_mapping: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test listing mappings when they exist"""
         # Monkeypatch settings to use temp directory
-        from budget_tracker.config import settings as settings_module
+        from budget_tracker.config import settings as settings_module  # noqa: PLC0415
 
         monkeypatch.setattr(settings_module.settings, "mappings_file", sample_mapping)
 
@@ -94,7 +94,7 @@ class TestEndToEnd:
 
     @pytest.mark.skip(reason="Requires interactive input and Ollama to be running")
     def test_full_processing_flow(
-        self, sample_csv: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, sample_csv: Path, tmp_path: Path, _monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """
         Test complete flow from CSV to output.
@@ -111,7 +111,7 @@ class TestEndToEnd:
         # This would need proper mocking of interactive prompts
         # and Ollama connection
 
-        result = runner.invoke(app, ["process", str(sample_csv), "--output", str(output_file)])
+        _result = runner.invoke(app, ["process", str(sample_csv), "--output", str(output_file)])
 
         # Verify output file exists
         assert output_file.exists()

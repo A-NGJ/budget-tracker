@@ -1,8 +1,7 @@
-"""Transaction data models for standardized and raw transaction formats."""
+"""Transaction data models for standardized transaction format."""
 
 from datetime import date
 from decimal import Decimal
-from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -18,7 +17,7 @@ class StandardTransaction(BaseModel):
     amount: Decimal
     source: str  # Bank name
     description: str | None = None  # Original description
-    confidence: float | None = Field(default=1.0, ge=0.0, le=1.0)
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
 
     @field_validator("category")
     @classmethod
@@ -30,13 +29,3 @@ class StandardTransaction(BaseModel):
             msg = "Category cannot be empty"
             raise ValueError(msg)
         return v
-
-
-class RawTransaction(BaseModel):
-    """Raw transaction data from CSV before normalization."""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    data: dict[str, Any]
-    source_file: str
-    row_number: int | None = None

@@ -129,6 +129,7 @@ def load_mapping(bank_name: str, mappings_file: Path) -> BankMapping | None:
     with mappings_file.open() as f:
         mappings = json.load(f)
 
-    if bank_name in mappings:
-        return BankMapping(**mappings[bank_name])
+    for name in mappings:
+        if name.lower() in bank_name.lower():
+            return BankMapping(**mappings[name])
     return None

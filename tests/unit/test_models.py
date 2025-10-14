@@ -6,7 +6,7 @@ from decimal import Decimal
 import pytest
 
 from budget_tracker.models.bank_mapping import BankMapping, ColumnMapping
-from budget_tracker.models.transaction import RawTransaction, StandardTransaction
+from budget_tracker.models.transaction import StandardTransaction
 
 
 class TestStandardTransaction:
@@ -46,19 +46,6 @@ class TestStandardTransaction:
                 amount=Decimal("100"),
                 source="Test Bank",
             )
-
-
-class TestRawTransaction:
-    """Tests for RawTransaction model."""
-
-    def test_create_raw_transaction(self) -> None:
-        """Test creating raw transaction from CSV data."""
-        raw = RawTransaction(
-            data={"Date": "10-10-2025", "Amount": "125.50", "Description": "Cafe"},
-            source_file="bank1.csv",
-        )
-        assert raw.data["Date"] == "10-10-2025"
-        assert raw.source_file == "bank1.csv"
 
 
 class TestBankMapping:

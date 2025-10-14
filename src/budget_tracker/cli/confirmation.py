@@ -19,7 +19,7 @@ def confirm_uncertain_categories(
     Returns:
         Updated list with user-confirmed categories
     """
-    uncertain = [t for t in transactions if t.confidence is not None and t.confidence < 0.6]
+    uncertain = [t for t in transactions if t.confidence < 0.6]
 
     if not uncertain:
         return transactions
