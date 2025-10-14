@@ -16,33 +16,59 @@ class TestStandardTransaction:
         """Test creating a valid standardized transaction."""
         transaction = StandardTransaction(
             date=date(2025, 10, 10),
-            category="Food & Dining",
+            category="Food & Drinks",
             subcategory="Restaurants",
             amount=Decimal("125.50"),
             source="Danske Bank",
         )
         assert transaction.date == date(2025, 10, 10)
         assert transaction.amount == Decimal("125.50")
-        assert transaction.category == "Food & Dining"
+        assert transaction.category == "Food & Drinks"
 
     def test_negative_amount_validation(self) -> None:
         """Test that expenses are stored as negative amounts."""
         transaction = StandardTransaction(
             date=date(2025, 10, 10),
-            category="Food & Dining",
+            category="Food & Drinks",
             subcategory="Restaurants",
             amount=Decimal("-125.50"),
             source="Danske Bank",
         )
         assert transaction.amount < 0
 
-    def test_invalid_category_raises_error(self) -> None:
+    def test_empty_category_raises_error(self) -> None:
         """Test that invalid category raises validation error."""
         with pytest.raises(ValueError, match="Category cannot be empty"):
             StandardTransaction(
                 date=date(2025, 10, 10),
                 category="",
                 subcategory="Test",
+                amount=Decimal("100"),
+                source="Test Bank",
+            )
+
+    def test_invalid_category_raises_error(self) -> None:
+        """Test that non-existent category raises validation error."""
+        with pytest.raises(
+            ValueError, match=r"Category 'NonExistent' not found in categories.yaml"
+        ):
+            StandardTransaction(
+                date=date(2025, 10, 10),
+                category="NonExistent",
+                subcategory="Test",
+                amount=Decimal("100"),
+                source="Test Bank",
+            )
+
+    def test_invalid_subcategory_raises_error(self) -> None:
+        """Test that non-existent subcategory raises validation error."""
+        with pytest.raises(
+            ValueError, match=r"Subcategory 'NonExistent' not found under category 'Food & Drinks'"
+        ):
+            StandardTransaction(
+                date=date(2025, 10, 10),
+                category="Food & Drinks",
+                subcategory="NonExistent",
                 amount=Decimal("100"),
                 source="Test Bank",
             )
