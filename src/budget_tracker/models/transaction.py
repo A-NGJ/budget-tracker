@@ -6,7 +6,7 @@ from decimal import Decimal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
-from budget_tracker.config.settings import settings
+from budget_tracker.config.settings import get_settings
 
 
 class StandardTransaction(BaseModel):
@@ -26,6 +26,8 @@ class StandardTransaction(BaseModel):
     @classmethod
     def validate_category(cls, v: str) -> str:
         """Validate that category exists in categories.yaml."""
+        settings = get_settings()
+
         if not v or not v.strip():
             msg = "Category cannot be empty"
             raise ValueError(msg)
@@ -46,6 +48,8 @@ class StandardTransaction(BaseModel):
     @classmethod
     def validate_subcategory(cls, v: str | None, info: ValidationInfo) -> str | None:
         """Validate that subcategory exists in categories.yaml under the given category."""
+        settings = get_settings()
+
         if v is None or not v.strip():
             return v
 
@@ -69,4 +73,3 @@ class StandardTransaction(BaseModel):
             msg = f"Categories file not found: {settings.categories_file}"
             raise FileNotFoundError(msg)
 
-        return v

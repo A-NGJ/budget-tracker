@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from budget_tracker.config.settings import get_settings
 from budget_tracker.exporters.csv_exporter import CSVExporter
 from budget_tracker.models.transaction import StandardTransaction
 
@@ -33,7 +34,7 @@ class TestCSVExporter:
 
     @pytest.fixture
     def exporter(self, tmp_path: Path) -> CSVExporter:
-        return CSVExporter(output_dir=tmp_path)
+        return CSVExporter(settings=get_settings(), output_dir=tmp_path)
 
     def test_export_to_csv(
         self,

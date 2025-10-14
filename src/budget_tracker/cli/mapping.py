@@ -4,7 +4,7 @@ from pathlib import Path
 from rich.console import Console
 from rich.prompt import Prompt
 
-from budget_tracker.config.settings import settings
+from budget_tracker.config.settings import get_settings
 from budget_tracker.models.bank_mapping import BankMapping, ColumnMapping
 
 console = Console()
@@ -138,7 +138,7 @@ def interactive_column_mapping(  # noqa: PLR0915
         console.print("  Example: '%d.%m.%Y' for 31.12.2024")
         date_format = Prompt.ask("Enter date format")
     else:
-        date_format = date_format_map.get(date_format_choice, settings.default_date_format)
+        date_format = date_format_map.get(date_format_choice, get_settings().default_date_format)
 
     # Decimal separator
     console.print("\n[bold]Decimal Separator Configuration[/bold]")

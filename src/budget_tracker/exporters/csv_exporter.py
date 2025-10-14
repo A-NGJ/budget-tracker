@@ -2,14 +2,14 @@ from pathlib import Path
 
 import pandas as pd
 
-from budget_tracker.config.settings import settings
+from budget_tracker.config.settings import Settings
 from budget_tracker.models.transaction import StandardTransaction
 
 
 class CSVExporter:
     """Export standardized transactions to CSV"""
 
-    def __init__(self, output_dir: Path | None = None) -> None:
+    def __init__(self, settings: Settings, output_dir: Path | None = None) -> None:
         self.output_dir = output_dir or settings.output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -29,6 +29,7 @@ class CSVExporter:
         for t in transactions:
             row = {
                 "Date": t.date.strftime("%Y-%m-%d"),
+                "Description": t.description,
                 "Category": f"{t.category}" + (f"/{t.subcategory}" if t.subcategory else ""),
                 "Amount (DKK)": float(t.amount),
                 "Source": t.source,

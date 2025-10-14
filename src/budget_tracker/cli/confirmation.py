@@ -1,13 +1,14 @@
 from rich.console import Console
 from rich.prompt import Prompt
 
-from budget_tracker.config.settings import settings
+from budget_tracker.config.settings import Settings
 from budget_tracker.models.transaction import StandardTransaction
 
 console = Console()
 
 
 def confirm_uncertain_categories(
+    settings: Settings,
     transactions: list[StandardTransaction],
 ) -> list[StandardTransaction]:
     """

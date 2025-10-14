@@ -13,7 +13,8 @@ import pandas as pd
 import pytest
 from typer.testing import CliRunner
 
-from budget_tracker.cli.main import app
+from budget_tracker.cli.main import app, create_app
+from budget_tracker.config.settings import Settings
 
 runner = CliRunner()
 
@@ -63,32 +64,34 @@ class TestEndToEnd:
         assert result.exit_code == 0
         assert "Process bank statement CSV files" in result.output
 
-    def test_list_mappings_empty(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_list_mappings_empty(self, tmp_path: Path) -> None:
         """Test listing mappings when none exist"""
         # Set up temporary config directory
         config_dir = tmp_path / "config"
         config_dir.mkdir()
         mappings_file = config_dir / "bank_mappings.json"
 
-        # Monkeypatch settings to use temp directory
-        from budget_tracker.config import settings as settings_module  # noqa: PLC0415
+        # Create test settings with custom paths
+        test_settings = Settings()
+        test_settings.mappings_file = mappings_file
 
-        monkeypatch.setattr(settings_module.settings, "mappings_file", mappings_file)
+        # Create app with injected test settings
+        test_app = create_app(settings=test_settings)
 
-        result = runner.invoke(app, ["list-mappings"])
+        result = runner.invoke(test_app, ["list-mappings"])
         assert result.exit_code == 0
         assert "No saved mappings found" in result.output
 
-    def test_list_mappings_with_data(
-        self, sample_mapping: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_list_mappings_with_data(self, sample_mapping: Path) -> None:
         """Test listing mappings when they exist"""
-        # Monkeypatch settings to use temp directory
-        from budget_tracker.config import settings as settings_module  # noqa: PLC0415
+        # Create test settings pointing to the sample mapping
+        test_settings = Settings()
+        test_settings.mappings_file = sample_mapping
 
-        monkeypatch.setattr(settings_module.settings, "mappings_file", sample_mapping)
+        # Create app with injected test settings
+        test_app = create_app(settings=test_settings)
 
-        result = runner.invoke(app, ["list-mappings"])
+        result = runner.invoke(test_app, ["list-mappings"])
         assert result.exit_code == 0
         assert "test_bank" in result.output
 

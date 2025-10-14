@@ -3,12 +3,13 @@ from unittest.mock import patch
 import pytest
 
 from budget_tracker.categorizer.llm_categorizer import CategoryResult, LLMCategorizer
+from budget_tracker.config.settings import get_settings
 
 
 class TestLLMCategorizer:
     @pytest.fixture
     def categorizer(self) -> LLMCategorizer:
-        return LLMCategorizer()
+        return LLMCategorizer(get_settings())
 
     @pytest.fixture
     def mock_ollama_response(self) -> dict[str, str]:

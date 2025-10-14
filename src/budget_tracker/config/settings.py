@@ -1,5 +1,6 @@
 """Application settings and configuration management."""
 
+from functools import cache
 from pathlib import Path
 from typing import Any
 
@@ -34,4 +35,9 @@ class Settings(BaseSettings):
 
 
 # Global settings instance
-settings = Settings()
+# settings = Settings()
+@cache
+def get_settings() -> Settings:
+    """Get cached settings instance."""
+    settings = Settings()
+    return settings

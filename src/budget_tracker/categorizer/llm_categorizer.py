@@ -3,7 +3,7 @@ import json
 import ollama
 from pydantic import BaseModel, Field
 
-from budget_tracker.config.settings import settings
+from budget_tracker.config.settings import Settings
 
 
 class CategoryResult(BaseModel):
@@ -35,7 +35,7 @@ class CategoryResult(BaseModel):
 class LLMCategorizer:
     """Categorize transactions using local LLM via Ollama"""
 
-    def __init__(self) -> None:
+    def __init__(self, settings: Settings) -> None:
         self.categories = settings.load_categories()
         self.model = settings.ollama_model
         self.base_url = settings.ollama_base_url
