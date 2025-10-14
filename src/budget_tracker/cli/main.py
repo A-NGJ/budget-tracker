@@ -19,7 +19,7 @@ from budget_tracker.utils.ollama import is_ollama_running
 console = Console()
 
 
-def create_app(settings: Settings | None = None) -> typer.Typer:
+def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR0915
     """Create the Typer app with injected settings.
 
     Args:
@@ -28,7 +28,9 @@ def create_app(settings: Settings | None = None) -> typer.Typer:
     Returns:
         Configured Typer app.
     """
-    app = typer.Typer(help="Bank Statement Normalizer - Standardize and categorize your transactions")
+    app = typer.Typer(
+        help="Bank Statement Normalizer - Standardize and categorize your transactions"
+    )
     _settings = settings or get_settings()
 
     @app.callback()
@@ -57,7 +59,9 @@ def create_app(settings: Settings | None = None) -> typer.Typer:
         console.print("[bold]Budget Tracker - Bank Statement Normalizer[/bold]\n")
 
         if not is_ollama_running():
-            console.print("[red]✗[/red] Ollama server is not running. Please start it and try again.")
+            console.print(
+                "[red]✗[/red] Ollama server is not running. Please start it and try again."
+            )
             raise typer.Exit(1)
 
         # Ensure directories exist
@@ -102,7 +106,7 @@ def create_app(settings: Settings | None = None) -> typer.Typer:
 
         # Step 2: Categorize with LLM and create StandardTransactions
         console.print("\n[cyan]Categorizing transactions with local LLM...[/cyan]")
-        categorizer = LLMCategorizer()
+        categorizer = LLMCategorizer(_settings)
         currency_converter = CurrencyConverter()
 
         standardized: list[StandardTransaction] = []
@@ -131,17 +135,19 @@ def create_app(settings: Settings | None = None) -> typer.Typer:
                 )
             )
 
-        console.print(f"[green]✓[/green] Categorized and normalized {len(standardized)} transactions")
+        console.print(
+            f"[green]✓[/green] Categorized and normalized {len(standardized)} transactions"
+        )
 
         # Step 4: Confirm uncertain categories
-        standardized = confirm_uncertain_categories(standardized)
+        standardized = confirm_uncertain_categories(_settings, standardized)
         if not standardized:
             console.print("[red]No transactions to export, exiting...[/red]")
             raise typer.Exit(1)
 
         # Step 5: Export
         output_file = output or (settings.output_dir / settings.default_output_filename)
-        exporter = CSVExporter()
+        exporter = CSVExporter(_settings)
         result_file = exporter.export(standardized, output_file)
 
         console.print("\n[bold green]✓ Success![/bold green]")

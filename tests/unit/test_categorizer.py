@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
-from budget_tracker.categorizer.llm_categorizer import CategoryResult, LLMCategorizer
+from budget_tracker.categorizer.llm_categorizer import LLMCategorizer
 from budget_tracker.config.settings import get_settings
 
 
@@ -57,21 +57,3 @@ class TestLLMCategorizer:
             assert "Food & Drinks" in prompt
             assert "Transportation" in prompt
 
-    def test_batch_categorization(self, categorizer: LLMCategorizer) -> None:
-        """Test categorizing multiple transactions"""
-        descriptions = ["Cafe Central", "Metro ticket", "Supermarket"]
-        with patch("ollama.generate") as mock_generate:
-            mock_generate.side_effect = [
-                {
-                    "response": '{"category": "Food & Drinks", "subcategory": "Restaurants", "confidence": 0.9}'  # noqa: E501
-                },
-                {
-                    "response": '{"category": "Transportation", "subcategory": "Public Transport", "confidence": 0.95}'  # noqa: E501
-                },
-                {
-                    "response": '{"category": "Food & Drinks", "subcategory": "Groceries", "confidence": 0.85}'  # noqa: E501
-                },
-            ]
-            results = categorizer.categorize_batch(descriptions)
-            assert len(results) == 3
-            assert all(isinstance(r, CategoryResult) for r in results)

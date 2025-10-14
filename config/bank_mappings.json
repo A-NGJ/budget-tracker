@@ -4,11 +4,15 @@
     "column_mapping": {
       "date_column": "Dato",
       "amount_column": "Bel\u00f8b",
-      "description_columns": ["Tekst"],
+      "description_columns": [
+        "Kategori",
+        "Underkategori",
+        "Tekst"
+      ],
       "currency_column": null
     },
     "date_format": "%d.%m.%Y",
-    "decimal_separator": ".",
+    "decimal_separator": ",",
     "default_currency": "DKK"
   }
 }
