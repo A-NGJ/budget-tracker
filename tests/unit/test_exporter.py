@@ -67,7 +67,14 @@ class TestCSVExporter:
         exporter.export(sample_transactions, output_file)
 
         df = pd.read_csv(output_file)
-        expected_columns = ["Date", "Category", "Amount (DKK)", "Source"]
+        expected_columns = [
+            "Date",
+            "Description",
+            "Category",
+            "Subcategory",
+            "Amount (DKK)",
+            "Source",
+        ]
         assert df.columns.tolist() == expected_columns
 
     def test_date_format_in_output(

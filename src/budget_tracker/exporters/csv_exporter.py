@@ -30,7 +30,8 @@ class CSVExporter:
             row = {
                 "Date": t.date.strftime("%Y-%m-%d"),
                 "Description": t.description,
-                "Category": f"{t.category}" + (f"/{t.subcategory}" if t.subcategory else ""),
+                "Category": t.category,
+                "Subcategory": t.subcategory,
                 "Amount (DKK)": float(t.amount),
                 "Source": t.source,
             }
@@ -42,7 +43,7 @@ class CSVExporter:
         df = df.sort_values("Date")
 
         # Ensure column order
-        df = df[["Date", "Category", "Amount (DKK)", "Source"]]
+        df = df[["Date", "Description", "Category", "Subcategory","Amount (DKK)", "Source"]]
 
         # Write to CSV
         df.to_csv(output_file, index=False)

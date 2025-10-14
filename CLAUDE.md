@@ -5,3 +5,4 @@
 # Coding standards
 
 - ALL newly written CODE MUST pass ruff linting and mypy type checks.
+- Always place imports at the top of the file.
