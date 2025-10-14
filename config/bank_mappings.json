@@ -4,7 +4,7 @@
     "column_mapping": {
       "date_column": "Dato",
       "amount_column": "Bel\u00f8b",
-      "description_column": "Tekst",
+      "description_columns": ["Tekst"],
       "currency_column": null
     },
     "date_format": "%d.%m.%Y",

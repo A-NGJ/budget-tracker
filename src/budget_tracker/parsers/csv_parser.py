@@ -100,8 +100,13 @@ class CSVParser:
                 else:
                     currency = mapping.default_currency
 
-                # Get description
-                description = str(row.get(mapping.column_mapping.description_column, ""))
+                # Get description from one or more columns, combine with || separator
+                description_parts = []
+                for col in mapping.column_mapping.description_columns:
+                    value = row.get(col)
+                    if not pd.isna(value) and str(value).strip():
+                        description_parts.append(str(value).strip())
+                description = " || ".join(description_parts) if description_parts else ""
 
                 transactions.append(
                     ParsedTransaction(

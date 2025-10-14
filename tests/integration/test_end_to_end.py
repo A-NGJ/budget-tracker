@@ -40,7 +40,7 @@ class TestEndToEnd:
                 "column_mapping": {
                     "date_column": "Date",
                     "amount_column": "Amount",
-                    "description_column": "Description",
+                    "description_columns": ["Description"],
                     "currency_column": None,
                 },
                 "date_format": "%Y-%m-%d",

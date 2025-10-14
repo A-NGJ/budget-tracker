@@ -1,3 +1,5 @@
+from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -49,12 +51,14 @@ class TestCSVParser:
         assert "Beløb" in columns
         assert "Tekst" in columns
 
-    def test_load_with_mapping(self, sample_csv_dot_decimal_delimiter: Path) -> None:
+    def test_load_with_mapping__decimal_separator_dot(
+        self, sample_csv_dot_decimal_delimiter: Path
+    ) -> None:
         """Test loading CSV with pre-configured mapping"""
         mapping = BankMapping(
             bank_name="Test Bank",
             column_mapping=ColumnMapping(
-                date_column="Dato", amount_column="Beløb", description_column="Tekst"
+                date_column="Dato", amount_column="Beløb", description_columns=["Tekst"]
             ),
             date_format="%d-%m-%Y",
         )
@@ -62,14 +66,61 @@ class TestCSVParser:
         parsed_transactions = parser.load_with_mapping(sample_csv_dot_decimal_delimiter, mapping)
         assert len(parsed_transactions) == 2
         # Check parsed fields
-        from datetime import date  # noqa: PLC0415
-        from decimal import Decimal  # noqa: PLC0415
 
         assert parsed_transactions[0].date == date(2025, 10, 10)
         assert parsed_transactions[0].amount == Decimal("125.50")
         assert parsed_transactions[0].description == "Cafe X"
         assert parsed_transactions[0].source == "Test Bank"
         assert parsed_transactions[0].currency == "DKK"  # default currency
+
+    def test_load_with_mapping__decimal_separator_comma(
+        self, sample_csv_comma_decimal_delimiter: Path
+    ) -> None:
+        """Test loading CSV with pre-configured mapping and comma decimal separator"""
+        mapping = BankMapping(
+            bank_name="Test Bank Comma",
+            column_mapping=ColumnMapping(
+                date_column="Date", amount_column="Amount", description_columns=["Description"]
+            ),
+            date_format="%Y-%m-%d",
+            decimal_separator=",",
+        )
+        parser = CSVParser()
+        parsed_transactions = parser.load_with_mapping(sample_csv_comma_decimal_delimiter, mapping)
+        assert len(parsed_transactions) == 3
+        # Check parsed fields
+        assert parsed_transactions[0].date == date(2025, 10, 10)
+        assert parsed_transactions[0].amount == Decimal("125.50")
+        assert parsed_transactions[0].description == "Purchase"
+        assert parsed_transactions[0].source == "Test Bank Comma"
+        assert parsed_transactions[0].currency == "DKK"  # default currency
+
+        assert parsed_transactions[2].amount == Decimal("1115.25")  # Check thousands parsing
+
+    def test_load_with_mapping__multiple_description_columns(self, tmp_path: Path) -> None:
+        """Test combining multiple columns into description with || separator"""
+        csv_content = """Date,Amount,Text,Category,Subcategory
+2025-10-10,125.50,Coffee shop,Food,Dining
+2025-10-11,-50.00,Grocery store,Shopping,Groceries"""
+        csv_file = tmp_path / "multi_desc.csv"
+        csv_file.write_text(csv_content)
+
+        mapping = BankMapping(
+            bank_name="Multi Column Bank",
+            column_mapping=ColumnMapping(
+                date_column="Date",
+                amount_column="Amount",
+                description_columns=["Text", "Category", "Subcategory"],
+            ),
+            date_format="%Y-%m-%d",
+        )
+        parser = CSVParser()
+        parsed_transactions = parser.load_with_mapping(csv_file, mapping)
+        assert len(parsed_transactions) == 2
+
+        # Check that columns are combined with || separator
+        assert parsed_transactions[0].description == "Coffee shop || Food || Dining"
+        assert parsed_transactions[1].description == "Grocery store || Shopping || Groceries"
 
     def test_handle_malformed_csv(self, tmp_path: Path) -> None:
         """Test graceful handling of malformed CSV"""
@@ -78,9 +129,3 @@ class TestCSVParser:
         parser = CSVParser()
         df, _ = parser.parse_file(bad_csv)
         assert df is not None  # Should not crash
-
-
-class TestInteractiveMapping:
-    def test_create_mapping_from_user_input(self) -> None:
-        """Test creating mapping from simulated user selections"""
-        # This will be implemented with Typer prompts

@@ -8,7 +8,7 @@ class ColumnMapping(BaseModel):
 
     date_column: str
     amount_column: str
-    description_column: str
+    description_columns: list[str]  # One or more columns to combine with || separator
     currency_column: str | None = None  # Optional: if currency is in a column
 
 

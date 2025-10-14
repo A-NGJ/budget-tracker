@@ -56,7 +56,7 @@ class TestBankMapping:
         mapping = BankMapping(
             bank_name="Danske Bank",
             column_mapping=ColumnMapping(
-                date_column="Dato", amount_column="Beløb", description_column="Tekst"
+                date_column="Dato", amount_column="Beløb", description_columns=["Tekst"]
             ),
             date_format="%d-%m-%Y",
         )
@@ -68,7 +68,7 @@ class TestBankMapping:
         mapping = BankMapping(
             bank_name="Test Bank",
             column_mapping=ColumnMapping(
-                date_column="Date", amount_column="Amount", description_column="Desc"
+                date_column="Date", amount_column="Amount", description_columns=["Desc"]
             ),
             date_format="%Y-%m-%d",
         )

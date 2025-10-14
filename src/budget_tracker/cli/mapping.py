@@ -10,7 +10,9 @@ from budget_tracker.models.bank_mapping import BankMapping, ColumnMapping
 console = Console()
 
 
-def interactive_column_mapping(file_path: Path, available_columns: list[str]) -> BankMapping | None:
+def interactive_column_mapping(  # noqa: PLR0915
+    file_path: Path, available_columns: list[str]
+) -> BankMapping | None:
     """
     Guide user through interactive column mapping.
 
@@ -31,8 +33,42 @@ def interactive_column_mapping(file_path: Path, available_columns: list[str]) ->
     # Amount column
     amount_col = Prompt.ask("Which column contains the amount?", choices=available_columns)
 
-    # Description column
-    desc_col = Prompt.ask("Which column contains the description/text?", choices=available_columns)
+    # Description columns (can be multiple)
+    console.print("\n[bold]Description Column(s)[/bold]")
+    console.print("You can select one or more columns to combine into the description.")
+    console.print(
+        "Multiple columns will be joined with || separator "
+        "(e.g., 'Text || Category || Subcategory')"
+    )
+
+    desc_cols: list[str] = []
+    while True:
+        # Filter out already selected columns from choices
+        remaining_cols = [
+            col
+            for col in available_columns
+            if col not in desc_cols and col not in [date_col, amount_col]
+        ]
+
+        if not remaining_cols:
+            console.print("[yellow]No more columns available to select.[/yellow]")
+            break
+
+        if desc_cols:
+            console.print(f"\n[dim]Currently selected: {' + '.join(desc_cols)}[/dim]")
+            add_more = Prompt.ask("Add another column?", choices=["y", "n"], default="n")
+            if add_more == "n":
+                break
+
+        desc_col = Prompt.ask(
+            "Which column contains description/text?" if not desc_cols else "Select another column",
+            choices=remaining_cols
+        )
+        desc_cols.append(desc_col)
+
+    if not desc_cols:
+        console.print("[red]Error: At least one description column is required[/red]")
+        return None
 
     # Currency handling
     console.print("\n[bold]Currency Configuration[/bold]")
@@ -84,7 +120,9 @@ def interactive_column_mapping(file_path: Path, available_columns: list[str]) ->
     console.print("  5. YYYY/MM/DD (e.g., 2024/12/31)")
     console.print("  6. Other")
 
-    date_format_choice = Prompt.ask("Select date format", choices=["1", "2", "3", "4", "5", "6"], default="1")
+    date_format_choice = Prompt.ask(
+        "Select date format", choices=["1", "2", "3", "4", "5", "6"], default="1"
+    )
 
     date_format_map = {
         "1": "%d-%m-%Y",
@@ -117,7 +155,7 @@ def interactive_column_mapping(file_path: Path, available_columns: list[str]) ->
         column_mapping=ColumnMapping(
             date_column=date_col,
             amount_column=amount_col,
-            description_column=desc_col,
+            description_columns=desc_cols,
             currency_column=currency_col,
         ),
         date_format=date_format,
@@ -130,7 +168,7 @@ def interactive_column_mapping(file_path: Path, available_columns: list[str]) ->
     console.print(f"  Bank: {bank_name}")
     console.print(f"  Date: {date_col} (format: {date_format})")
     console.print(f"  Amount: {amount_col}")
-    console.print(f"  Description: {desc_col}")
+    console.print(f"  Description: {' || '.join(desc_cols)}")
     console.print(f"  Currency: {currency_col or default_currency}")
     console.print(f"  Decimal separator: {decimal_separator}")
 
