@@ -74,9 +74,33 @@ def interactive_column_mapping(file_path: Path, available_columns: list[str]) ->
         else:
             default_currency = currency_map.get(currency_choice, "DKK")
 
-    # Date format - use default from settings
-    date_format = settings.default_date_format
-    console.print("\n[dim]Using date format: DD-MM-YYYY[/dim]")
+    # Date format
+    console.print("\n[bold]Date Format Configuration[/bold]")
+    console.print("What date format does your CSV use?")
+    console.print("  1. DD-MM-YYYY (e.g., 31-12-2024)")
+    console.print("  2. YYYY-MM-DD (e.g., 2024-12-31)")
+    console.print("  3. MM/DD/YYYY (e.g., 12/31/2024)")
+    console.print("  4. DD/MM/YYYY (e.g., 31/12/2024)")
+    console.print("  5. YYYY/MM/DD (e.g., 2024/12/31)")
+    console.print("  6. Other")
+
+    date_format_choice = Prompt.ask("Select date format", choices=["1", "2", "3", "4", "5", "6"], default="1")
+
+    date_format_map = {
+        "1": "%d-%m-%Y",
+        "2": "%Y-%m-%d",
+        "3": "%m/%d/%Y",
+        "4": "%d/%m/%Y",
+        "5": "%Y/%m/%d",
+    }
+
+    if date_format_choice == "6":
+        console.print("\nEnter custom date format using Python strftime codes:")
+        console.print("  %d = day, %m = month, %Y = year")
+        console.print("  Example: '%d.%m.%Y' for 31.12.2024")
+        date_format = Prompt.ask("Enter date format")
+    else:
+        date_format = date_format_map.get(date_format_choice, settings.default_date_format)
 
     # Decimal separator
     console.print("\n[bold]Decimal Separator Configuration[/bold]")
