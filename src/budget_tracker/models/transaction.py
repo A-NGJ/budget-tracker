@@ -1,5 +1,6 @@
 """Transaction data models for standardized transaction format."""
 
+import hashlib
 from datetime import date
 from decimal import Decimal
 
@@ -72,3 +73,23 @@ class StandardTransaction(BaseModel):
         else:
             msg = f"Categories file not found: {settings.categories_file}"
             raise FileNotFoundError(msg)
+
+    @property
+    def transaction_id(self) -> str:
+        """
+        Generate unique transaction ID from all fields.
+
+        Uses SHA256 hash of concatenated fields to create a stable,
+        unique identifier for deduplication purposes.
+        """
+
+        # Normalize values for consistent hashing
+        parts = [
+            self.date.isoformat(),
+            str(self.amount),
+            self.source,
+            self.description or "",
+        ]
+
+        combined = "|".join(parts)
+        return hashlib.sha256(combined.encode()).hexdigest()[:16]
