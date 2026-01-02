@@ -1,6 +1,6 @@
 """Bank mapping models for CSV column configuration."""
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ColumnMapping(BaseModel):
@@ -22,3 +22,10 @@ class BankMapping(BaseModel):
     date_format: str = "%Y-%m-%d"
     decimal_separator: str = "."
     default_currency: str = "DKK"  # Default currency if not specified per transaction
+    blacklist_keywords: list[str] = Field(default_factory=list)  # Keywords to ignore transactions
+
+    def remove_blacklist_keywords(self, text: str) -> str:
+        """Remove blacklist keywords from a text string."""
+        for keyword in self.blacklist_keywords:
+            text = text.replace(keyword, "")
+        return text.strip()

@@ -104,8 +104,11 @@ class CSVParser:
                 description_parts = []
                 for col in mapping.column_mapping.description_columns:
                     value = row.get(col)
-                    if not pd.isna(value) and str(value).strip():
-                        description_parts.append(str(value).strip())
+                    if pd.isna(value):
+                        continue
+                    value = mapping.remove_blacklist_keywords(str(value))
+                    if value:
+                        description_parts.append(value)
                 description = " || ".join(description_parts) if description_parts else ""
 
                 transactions.append(
