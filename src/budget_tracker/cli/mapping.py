@@ -10,8 +10,10 @@ from budget_tracker.models.bank_mapping import BankMapping, ColumnMapping
 console = Console()
 
 
-def interactive_column_mapping(  # noqa: PLR0915
-    file_path: Path, available_columns: list[str]
+def interactive_column_mapping(  # noqa: PLR0912,PLR0915
+    file_path: Path,
+    columns: list[str],
+    bank_name: str | None = None,
 ) -> BankMapping | None:
     """
     Guide user through interactive column mapping.
@@ -20,7 +22,7 @@ def interactive_column_mapping(  # noqa: PLR0915
         BankMapping if successful, None if cancelled
     """
     console.print("\n[bold]Column Mapping Setup[/bold]")
-    console.print(f"Available columns in CSV: {', '.join(available_columns)}\n")
+    console.print(f"Available columns in CSV: {', '.join(columns)}\n")
 
     # Bank name
     bank_name = Prompt.ask(
@@ -28,10 +30,10 @@ def interactive_column_mapping(  # noqa: PLR0915
     )
 
     # Date column
-    date_col = Prompt.ask("Which column contains the transaction date?", choices=available_columns)
+    date_col = Prompt.ask("Which column contains the transaction date?", choices=columns)
 
     # Amount column
-    amount_col = Prompt.ask("Which column contains the amount?", choices=available_columns)
+    amount_col = Prompt.ask("Which column contains the amount?", choices=columns)
 
     # Description columns (can be multiple)
     console.print("\n[bold]Description Column(s)[/bold]")
@@ -45,9 +47,7 @@ def interactive_column_mapping(  # noqa: PLR0915
     while True:
         # Filter out already selected columns from choices
         remaining_cols = [
-            col
-            for col in available_columns
-            if col not in desc_cols and col not in [date_col, amount_col]
+            col for col in columns if col not in desc_cols and col not in [date_col, amount_col]
         ]
 
         if not remaining_cols:
@@ -80,9 +80,7 @@ def interactive_column_mapping(  # noqa: PLR0915
     default_currency = "DKK"
 
     if has_currency_column == "y":
-        currency_col = Prompt.ask(
-            "Which column contains the currency code?", choices=available_columns
-        )
+        currency_col = Prompt.ask("Which column contains the currency code?", choices=columns)
     else:
         # Ask for default currency
         console.print("\nCommon currencies:")
@@ -148,6 +146,9 @@ def interactive_column_mapping(  # noqa: PLR0915
 
     decimal_choice = Prompt.ask("Select decimal separator", choices=["1", "2"], default="1")
     decimal_separator = "." if decimal_choice == "1" else ","
+
+    if not bank_name:
+        bank_name = Prompt.ask("Enter bank name for this mapping", default=file_path.stem)
 
     # Create mapping
     mapping = BankMapping(

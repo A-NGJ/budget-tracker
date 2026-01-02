@@ -294,14 +294,14 @@ def list_mappings(ctx: typer.Context) -> None:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking passes: `ty check`
-- [ ] Linting passes: `ruff check`
-- [ ] Format check passes: `ruff format --check`
+- [x] Type checking passes: `ty check`
+- [x] Linting passes: `ruff check`
+- [x] Format check passes: `ruff format --check`
 
 #### Manual Verification:
-- [ ] `budget-tracker process file.csv --bank test` works
-- [ ] `budget-tracker list-mappings` shows YAML files from directory
-- [ ] Error shown when `--bank` flag missing
+- [x] `budget-tracker process file.csv --bank test` works
+- [x] `budget-tracker list-mappings` shows YAML files from directory
+- [x] Error shown when `--bank` flag missing
 
 **Note**: Pause for manual confirmation before proceeding to Phase 3.
 
@@ -373,12 +373,12 @@ Remove any JSON-specific ignores for bank mappings if present.
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `config/banks/danske_bank.yaml` exists with correct content
-- [ ] `config/bank_mappings.json` deleted
+- [x] `config/banks/danske_bank.yaml` exists with correct content
+- [x] `config/bank_mappings.json` deleted
 
 #### Manual Verification:
-- [ ] `budget-tracker list-mappings` shows migrated banks
-- [ ] Processing with migrated mapping works
+- [x] `budget-tracker list-mappings` shows migrated banks
+- [x] Processing with migrated mapping works
 
 **Note**: Pause for manual confirmation before proceeding to Phase 4.
 
@@ -468,13 +468,13 @@ import yaml
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] All tests pass: `pytest`
-- [ ] Type checking passes: `ty check`
-- [ ] Linting passes: `ruff check`
+- [x] All tests pass: `pytest`
+- [x] Type checking passes: `ty check`
+- [x] Linting passes: `ruff check`
 
 #### Manual Verification:
-- [ ] Integration tests cover new YAML behavior
-- [ ] Edge cases (missing directory, empty directory) handled
+- [x] Integration tests cover new YAML behavior
+- [x] Edge cases (missing directory, empty directory) handled
 
 ---
 

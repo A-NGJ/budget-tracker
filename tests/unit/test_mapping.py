@@ -2,7 +2,7 @@ from pathlib import Path
 
 import yaml
 
-from budget_tracker.cli.mapping import save_mapping, load_mapping
+from budget_tracker.cli.mapping import load_mapping, save_mapping
 from budget_tracker.models.bank_mapping import BankMapping, ColumnMapping
 
 
@@ -34,14 +34,18 @@ class TestBankMappingYAML:
         banks_dir.mkdir()
 
         yaml_file = banks_dir / "test_bank.yaml"
-        yaml_file.write_text(yaml.safe_dump({
-            "bank_name": "test_bank",
-            "column_mapping": {
-                "date_column": "Date",
-                "amount_column": "Amount",
-                "description_columns": ["Desc"],
-            },
-        }))
+        yaml_file.write_text(
+            yaml.safe_dump(
+                {
+                    "bank_name": "test_bank",
+                    "column_mapping": {
+                        "date_column": "Date",
+                        "amount_column": "Amount",
+                        "description_columns": ["Desc"],
+                    },
+                }
+            )
+        )
 
         mapping = load_mapping("test_bank", banks_dir)
 
@@ -56,4 +60,3 @@ class TestBankMappingYAML:
         mapping = load_mapping("non_existent_bank", banks_dir)
 
         assert mapping is None
-

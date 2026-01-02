@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from typing import Annotated
 
@@ -10,7 +9,7 @@ from budget_tracker.cli.confirmation import confirm_uncertain_categories
 from budget_tracker.cli.mapping import interactive_column_mapping, load_mapping, save_mapping
 from budget_tracker.config.settings import Settings, get_settings
 from budget_tracker.currency.converter import CurrencyConverter
-from budget_tracker.exporters.csv_exporter import CSVExporter
+from budget_tracker.exporters import CSVExporter
 from budget_tracker.exporters.summary import print_summary
 from budget_tracker.models.transaction import StandardTransaction
 from budget_tracker.parsers.csv_parser import CSVParser, ParsedTransaction
@@ -43,6 +42,12 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
     def process(
         ctx: typer.Context,
         files: Annotated[list[Path], typer.Argument(help="CSV files to process")],
+        banks: Annotated[
+            list[str],
+            typer.Option(
+                "--banks", "-b", help="Bank name(s) for mapping lookup. Must match number of files."
+            ),
+        ],
         output: Annotated[
             Path | None, typer.Option("--output", "-o", help="Output CSV file path")
         ] = None,
@@ -67,35 +72,39 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         # Ensure directories exist
         settings.ensure_directories()
 
-        # Validate input files
-        for file in files:
-            if not file.exists():
-                console.print(f"[red]✗[/red] File not found: {file}")
-                raise typer.Exit(1)
+        if len(files) != len(banks):
+            console.print(
+                f"[red]✗[/red] Number of banks ({len(banks)}) "
+                f"must match number of files ({len(files)})."
+            )
+            console.print("Usage: budget-tracker process file1.csv file2.csv --banks bank1 bank2")
+            console.print("Run 'budget-tracker list-mappings' to see available bank names.")
+            raise typer.Exit(1)
 
-        console.print(f"Processing {len(files)} file(s)...")
-
-        # Step 1: Parse CSV files with column mapping
+        # Setup
         parser = CSVParser()
         all_parsed_transactions: list[ParsedTransaction] = []
 
-        for file in files:
+        # Validate input files
+        for i, file in enumerate(files):
             console.print(f"\n[cyan]Processing:[/cyan] {file.name}")
 
-            # Try to load saved mapping
-            mapping = load_mapping(file.stem, settings.mappings_file)
+            mapping = load_mapping(banks[i], settings.banks_dir)
 
             if not mapping:
                 # Interactive column mapping
                 _, columns = parser.parse_file(file)
                 console.print(f"Detected {len(columns)} columns: {', '.join(columns)}")
+                console.print(
+                    f"[yellow]No mapping found for '{banks[i]}'. Creating new mapping...[/yellow]"
+                )
 
-                mapping = interactive_column_mapping(file, columns)
+                mapping = interactive_column_mapping(file, columns, bank_name=banks[i])
                 if not mapping:
                     console.print("[red]Mapping cancelled[/red]")
                     raise typer.Exit(1)
 
-                save_mapping(mapping, settings.mappings_file)
+                save_mapping(mapping, settings.banks_dir)
             else:
                 console.print(f"[green]✓[/green] Using saved mapping for {mapping.bank_name}")
 
@@ -147,7 +156,7 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
 
         # Step 5: Export
         output_file = output or (settings.output_dir / settings.default_output_filename)
-        exporter = CSVExporter(_settings)
+        exporter = CSVExporter(_settings, output_file=output_file)
         result_file = exporter.export(standardized, output_file)
 
         console.print("\n[bold green]✓ Success![/bold green]")
@@ -161,15 +170,19 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         """List all saved bank mappings"""
         settings: Settings = ctx.obj["settings"]
 
-        if not settings.mappings_file.exists():
+        if not settings.banks_dir.exists():
             console.print("No saved mappings found.")
             return
 
-        with settings.mappings_file.open() as f:
-            mappings = json.load(f)
+        yaml_files = list(settings.banks_dir.glob("*.yaml"))
 
-        console.print("\n[bold]Saved Bank Mappings:[/bold]")
-        for bank_name in mappings:
+        if not yaml_files:
+            console.print("No saved mappings found.")
+            return
+
+        console.print("[bold]Saved Bank Mappings:[/bold]\n")
+        for yaml_file in sorted(yaml_files):
+            bank_name = yaml_file.stem
             console.print(f"  • {bank_name}")
 
     return app
