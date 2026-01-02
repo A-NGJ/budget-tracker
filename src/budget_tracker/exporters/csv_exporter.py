@@ -43,7 +43,7 @@ class CSVExporter:
         df = df.sort_values("Date")
 
         # Ensure column order
-        df = df[["Date", "Description", "Category", "Subcategory","Amount (DKK)", "Source"]]
+        df = df[["Date", "Description", "Category", "Subcategory", "Amount (DKK)", "Source"]]
 
         # Write to CSV
         df.to_csv(output_file, index=False)

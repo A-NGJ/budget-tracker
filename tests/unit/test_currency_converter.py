@@ -61,10 +61,13 @@ class TestExchangeRateProvider:
         """Test fallback behavior when API is unavailable"""
         import httpx  # noqa: PLC0415
 
-        with patch(
-            "budget_tracker.currency.exchange_rate_provider.httpx.get",
-            side_effect=httpx.HTTPError("API Error"),
-        ), pytest.raises(ValueError, match="Unable to fetch exchange rate"):
+        with (
+            patch(
+                "budget_tracker.currency.exchange_rate_provider.httpx.get",
+                side_effect=httpx.HTTPError("API Error"),
+            ),
+            pytest.raises(ValueError, match="Unable to fetch exchange rate"),
+        ):
             provider.get_rate("EUR", "DKK", date(2025, 10, 10))
 
 

@@ -72,4 +72,3 @@ class StandardTransaction(BaseModel):
         else:
             msg = f"Categories file not found: {settings.categories_file}"
             raise FileNotFoundError(msg)
-

@@ -56,4 +56,3 @@ class TestLLMCategorizer:
             prompt = call_args[1]["prompt"]
             assert "Food & Drinks" in prompt
             assert "Transportation" in prompt
-

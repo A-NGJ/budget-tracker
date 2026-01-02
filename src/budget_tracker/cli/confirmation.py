@@ -46,8 +46,7 @@ def confirm_uncertain_categories(
             transaction.subcategory = cached_subcategory
             transaction.confidence = 1.0
             console.print(
-                f"\n[dim]Reusing category for: {transaction.description} "
-                f"→ {cached_category}[/dim]"
+                f"\n[dim]Reusing category for: {transaction.description} → {cached_category}[/dim]"
             )
             continue
         console.print(f"\n[bold]Transaction:[/bold] {transaction.description}")
