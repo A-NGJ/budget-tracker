@@ -209,3 +209,9 @@ __marimo__/
 .DS_Store
 
 data/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Claude Code local settings
+.claude/thoughts/local/
