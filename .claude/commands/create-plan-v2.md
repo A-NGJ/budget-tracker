@@ -123,6 +123,14 @@ Save to `.claude/thoughts/shared/plans/YYYY-MM-DD-ENG-XXXX-description.md`
 // Specific code to add/modify
 ```
 
+#### 2. [Component/File Group tests]
+**File**: `path/to/test_file.ext`
+**Changes**: [Summary]
+
+```[language]
+// Specific test code to add/modify
+```
+
 ### Success Criteria:
 
 #### Automated Verification:
@@ -146,7 +154,8 @@ Save to `.claude/thoughts/shared/plans/YYYY-MM-DD-ENG-XXXX-description.md`
 ## Testing Strategy
 
 ### Unit Tests:
-- [What to test, key edge cases]
+- [What to test, key edge cases].
+- References to tests cases added in each phase.
 
 ### Manual Testing:
 1. [Specific verification step]
