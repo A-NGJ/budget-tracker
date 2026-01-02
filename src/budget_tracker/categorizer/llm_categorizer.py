@@ -28,8 +28,10 @@ class CategoryResult(BaseModel):
             confidence=confidence,
             needs_confirmation=needs_confirmation,
         )
+        settings = get_settings()
+
         # Mark for confirmation if confidence is low
-        if self.confidence < 0.6:
+        if self.confidence < settings.ollama_confidence_threshold:
             self.needs_confirmation = True
 
     @field_validator("category")
@@ -151,6 +153,15 @@ Confidence should be 0.0 to 1.0 where:
 
 Choose the most specific subcategory possible. If description is unclear, use \
 "Other/Uncategorized".
+
+Some popular supermarkets:
+- Netto
+- Lidl
+- Rema 1000
+- Coop
+- Føtex
+
+They should be categorized as "Food & Drinks/Groceries"
 """
         return prompt
 
