@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 
 from budget_tracker.config.settings import get_settings
-from budget_tracker.exporters.csv_exporter import CSVExporter
+from budget_tracker.exporters import CSVExporter
 from budget_tracker.models.transaction import StandardTransaction
 
 
@@ -32,20 +32,17 @@ class TestCSVExporter:
             ),
         ]
 
-    @pytest.fixture
-    def exporter(self, tmp_path: Path) -> CSVExporter:
-        return CSVExporter(settings=get_settings(), output_dir=tmp_path)
-
     def test_export_to_csv(
         self,
-        exporter: CSVExporter,
         sample_transactions: list[StandardTransaction],
         tmp_path: Path,
     ) -> None:
         """Test exporting transactions to CSV"""
         output_file = tmp_path / "output.csv"
-        exporter.export(sample_transactions, output_file)
+        exporter = CSVExporter(settings=get_settings(), output_file=output_file)
+        result = exporter.export(sample_transactions)
 
+        assert result == str(output_file)
         assert output_file.exists()
 
         # Verify CSV content
@@ -58,16 +55,17 @@ class TestCSVExporter:
 
     def test_correct_column_order(
         self,
-        exporter: CSVExporter,
         sample_transactions: list[StandardTransaction],
         tmp_path: Path,
     ) -> None:
         """Test that columns are in correct order"""
         output_file = tmp_path / "output.csv"
-        exporter.export(sample_transactions, output_file)
+        exporter = CSVExporter(settings=get_settings(), output_file=output_file)
+        exporter.export(sample_transactions)
 
         df = pd.read_csv(output_file)
         expected_columns = [
+            "Transaction ID",
             "Date",
             "Description",
             "Category",
@@ -79,18 +77,18 @@ class TestCSVExporter:
 
     def test_date_format_in_output(
         self,
-        exporter: CSVExporter,
         sample_transactions: list[StandardTransaction],
         tmp_path: Path,
     ) -> None:
         """Test that dates are formatted correctly"""
         output_file = tmp_path / "output.csv"
-        exporter.export(sample_transactions, output_file)
+        exporter = CSVExporter(get_settings(), output_file)
+        exporter.export(sample_transactions)
 
         df = pd.read_csv(output_file)
         assert df.iloc[0]["Date"] == "2025-10-10"
 
-    def test_combine_multiple_sources(self, exporter: CSVExporter, tmp_path: Path) -> None:
+    def test_combine_multiple_sources(self, tmp_path: Path) -> None:
         """Test combining transactions from multiple banks"""
         transactions = [
             StandardTransaction(
@@ -108,7 +106,8 @@ class TestCSVExporter:
         ]
 
         output_file = tmp_path / "combined.csv"
-        exporter.export(transactions, output_file)
+        exporter = CSVExporter(get_settings(), output_file=output_file)
+        exporter.export(transactions)
 
         df = pd.read_csv(output_file)
         assert len(df) == 2
@@ -116,7 +115,6 @@ class TestCSVExporter:
 
     def test_sort_by_date(
         self,
-        exporter: CSVExporter,
         sample_transactions: list[StandardTransaction],
         tmp_path: Path,
     ) -> None:
@@ -125,7 +123,8 @@ class TestCSVExporter:
         unsorted = [sample_transactions[1], sample_transactions[0]]
 
         output_file = tmp_path / "sorted.csv"
-        exporter.export(unsorted, output_file)
+        exporter = CSVExporter(get_settings(), output_file=output_file)
+        exporter.export(unsorted)
 
         df = pd.read_csv(output_file)
         dates = pd.to_datetime(df["Date"])

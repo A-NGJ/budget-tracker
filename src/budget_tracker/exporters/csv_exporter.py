@@ -9,25 +9,25 @@ from budget_tracker.models.transaction import StandardTransaction
 class CSVExporter:
     """Export standardized transactions to CSV"""
 
-    def __init__(self, settings: Settings, output_dir: Path | None = None) -> None:
-        self.output_dir = output_dir or settings.output_dir
+    def __init__(self, settings: Settings, output_file: Path | None = None) -> None:
+        self.output_dir = settings.output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.output_file = output_file or (self.output_dir / settings.default_output_filename)
 
-    def export(self, transactions: list[StandardTransaction], output_file: Path) -> Path:
+    def export(self, transactions: list[StandardTransaction]) -> str:
         """
         Export transactions to standardized CSV.
 
         Args:
             transactions: List of standardized transactions
-            output_file: Output file path
 
         Returns:
-            Path to created file
+            Path to created file as string
         """
-        # Convert to DataFrame
         data = []
         for t in transactions:
             row = {
+                "Transaction ID": t.transaction_id,
                 "Date": t.date.strftime("%Y-%m-%d"),
                 "Description": t.description,
                 "Category": t.category,
@@ -38,14 +38,18 @@ class CSVExporter:
             data.append(row)
 
         df = pd.DataFrame(data)
-
-        # Sort by date
         df = df.sort_values("Date")
+        df = df[
+            [
+                "Transaction ID",
+                "Date",
+                "Description",
+                "Category",
+                "Subcategory",
+                "Amount (DKK)",
+                "Source",
+            ]
+        ]
+        df.to_csv(self.output_file, index=False)
 
-        # Ensure column order
-        df = df[["Date", "Description", "Category", "Subcategory", "Amount (DKK)", "Source"]]
-
-        # Write to CSV
-        df.to_csv(output_file, index=False)
-
-        return output_file
+        return str(self.output_file)
