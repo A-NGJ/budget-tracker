@@ -6,11 +6,11 @@ Run: ollama serve (in background)
 Run: ollama pull llama3.2:3b
 """
 
-import json
 from pathlib import Path
 
 import pandas as pd
 import pytest
+import yaml
 from typer.testing import CliRunner
 
 from budget_tracker.cli.main import app, create_app
@@ -33,24 +33,26 @@ class TestEndToEnd:
 
     @pytest.fixture
     def sample_mapping(self, tmp_path: Path) -> Path:
-        """Create a sample bank mapping file"""
-        mappings_file = tmp_path / "bank_mappings.json"
-        mapping = {
-            "test_bank": {
-                "bank_name": "test_bank",
-                "column_mapping": {
-                    "date_column": "Date",
-                    "amount_column": "Amount",
-                    "description_columns": ["Description"],
-                    "currency_column": None,
-                },
-                "date_format": "%Y-%m-%d",
-                "decimal_separator": ".",
-                "default_currency": "DKK",
-            }
+        """Create a sample bank mapping directory with YAML file"""
+        banks_dir = tmp_path / "banks"
+        banks_dir.mkdir()
+
+        mapping_data = {
+            "bank_name": "test_bank",
+            "column_mapping": {
+                "date_column": "Date",
+                "amount_column": "Amount",
+                "description_columns": ["Description"],
+                "currency_column": None,
+            },
+            "date_format": "%Y-%m-%d",
+            "decimal_separator": ".",
+            "default_currency": "DKK",
         }
-        mappings_file.write_text(json.dumps(mapping, indent=2))
-        return mappings_file
+
+        yaml_file = banks_dir / "test_bank.yaml"
+        yaml_file.write_text(yaml.safe_dump(mapping_data))
+        return banks_dir
 
     def test_cli_help(self) -> None:
         """Test that CLI help displays correctly"""
@@ -66,14 +68,12 @@ class TestEndToEnd:
 
     def test_list_mappings_empty(self, tmp_path: Path) -> None:
         """Test listing mappings when none exist"""
-        # Set up temporary config directory
-        config_dir = tmp_path / "config"
-        config_dir.mkdir()
-        mappings_file = config_dir / "bank_mappings.json"
+        banks_dir = tmp_path / "banks"
+        # Don't create directory - should handle non-existent directory
 
         # Create test settings with custom paths
         test_settings = Settings()
-        test_settings.mappings_file = mappings_file
+        test_settings.banks_dir = banks_dir
 
         # Create app with injected test settings
         test_app = create_app(settings=test_settings)
@@ -84,9 +84,9 @@ class TestEndToEnd:
 
     def test_list_mappings_with_data(self, sample_mapping: Path) -> None:
         """Test listing mappings when they exist"""
-        # Create test settings pointing to the sample mapping
+        # Create test settings pointing to the sample mapping directory
         test_settings = Settings()
-        test_settings.mappings_file = sample_mapping
+        test_settings.banks_dir = sample_mapping
 
         # Create app with injected test settings
         test_app = create_app(settings=test_settings)
@@ -131,10 +131,15 @@ class TestEndToEnd:
 class TestCLIValidation:
     def test_process_nonexistent_file(self) -> None:
         """Test that processing a non-existent file shows an error"""
-        result = runner.invoke(app, ["process", "nonexistent.csv"])
+        result = runner.invoke(app, ["process", "nonexistent.csv", "--banks", "test_bank"])
         assert result.exit_code == 1
 
     def test_process_requires_files(self) -> None:
         """Test that process command requires at least one file"""
         result = runner.invoke(app, ["process"])
+        assert result.exit_code != 0
+
+    def test_process_requires_banks_flag(self) -> None:
+        """Test that process command requires --banks flag"""
+        result = runner.invoke(app, ["process", "somefile.csv"])
         assert result.exit_code != 0
