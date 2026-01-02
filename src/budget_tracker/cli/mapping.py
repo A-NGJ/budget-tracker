@@ -1,6 +1,6 @@
-import json
 from pathlib import Path
 
+import yaml
 from rich.console import Console
 from rich.prompt import Prompt
 
@@ -62,7 +62,7 @@ def interactive_column_mapping(  # noqa: PLR0915
 
         desc_col = Prompt.ask(
             "Which column contains description/text?" if not desc_cols else "Select another column",
-            choices=remaining_cols
+            choices=remaining_cols,
         )
         desc_cols.append(desc_col)
 
@@ -179,30 +179,39 @@ def interactive_column_mapping(  # noqa: PLR0915
     return None
 
 
-def save_mapping(mapping: BankMapping, mappings_file: Path) -> None:
-    """Save bank mapping to JSON file"""
-    mappings: dict[str, dict[str, object]] = {}
-    if mappings_file.exists():
-        with mappings_file.open() as f:
-            mappings = json.load(f)
+def save_mapping(mapping: BankMapping, banks_dir: Path) -> None:
+    """Save bank mapping to YAML file
 
-    mappings[mapping.bank_name] = mapping.model_dump()
+    Args:
+        mapping: BankMapping to save
+        banks_dir: Directory to save YAML file in
+    """
+    banks_dir.mkdir(parents=True, exist_ok=True)
+    mapping_file = banks_dir / f"{mapping.bank_name}.yaml"
 
-    with mappings_file.open("w") as f:
-        json.dump(mappings, f, indent=2)
+    with mapping_file.open("w") as f:
+        yaml.safe_dump(mapping.model_dump(), f, default_flow_style=False, sort_keys=False)
 
-    console.print(f"[green]✓[/green] Mapping saved for {mapping.bank_name}")
+    console.print(f"[green]✓[/green] Mapping saved to {mapping_file}")
 
 
-def load_mapping(bank_name: str, mappings_file: Path) -> BankMapping | None:
-    """Load saved bank mapping by name"""
-    if not mappings_file.exists():
+def load_mapping(bank_name: str, banks_dir: Path) -> BankMapping | None:
+    """Load bank mapping from YAML file
+
+    Args:
+        bank_name: Exact bank name (matches filename without .yaml)
+        banks_dir: Direectory containing bank YAML files
+
+    Returns:
+        BankMapping if found, None otherwise
+    """
+
+    mapping_file = banks_dir / f"{bank_name}.yaml"
+
+    if not mapping_file.exists():
         return None
 
-    with mappings_file.open() as f:
-        mappings = json.load(f)
+    with mapping_file.open() as f:
+        data = yaml.safe_load(f)
 
-    for name in mappings:
-        if name.lower() in bank_name.lower():
-            return BankMapping(**mappings[name])
-    return None
+    return BankMapping.model_validate(data)

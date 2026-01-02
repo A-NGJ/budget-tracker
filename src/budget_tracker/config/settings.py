@@ -16,10 +16,11 @@ class Settings(BaseSettings):
     output_dir: Path = Path.cwd() / "data" / "output"
 
     categories_file: Path = Path.cwd() / "config" / "categories.yaml"
-    mappings_file: Path = Path.cwd() / "config" / "bank_mappings.json"
+    banks_dir: Path = Path.cwd() / "config" / "banks"
 
     ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "llama3.2:3b"
+    ollama_model: str = "deepseek-r1:7b"  # "llama3.2:3b"
+    ollama_confidence_threshold: float = 0.9
 
     default_output_filename: str = "standardized_transactions.csv"
     default_date_format: str = "%d-%m-%Y"  # DD-MM-YYYY format
@@ -30,12 +31,13 @@ class Settings(BaseSettings):
             return yaml.safe_load(f)  # type: ignore[no-any-return]
 
     def ensure_directories(self) -> None:
-        """Create necessary directories if they don't exist."""
+        """Ensure required directories exist."""
+        self.config_dir.mkdir(parents=True, exist_ok=True)
+        self.data_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.banks_dir.mkdir(parents=True, exist_ok=True)
 
 
-# Global settings instance
-# settings = Settings()
 @cache
 def get_settings() -> Settings:
     """Get cached settings instance."""
