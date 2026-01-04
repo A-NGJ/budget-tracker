@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     default_output_filename: str = "standardized_transactions.csv"
     default_date_format: str = "%d-%m-%Y"  # DD-MM-YYYY format
 
+    # Google Sheets settings
+    google_credentials_dir: Path = Path.home() / ".budget-tracker"
+    google_credentials_file: Path = Path.home() / ".budget-tracker" / "credentials.json"
+    google_token_file: Path = Path.home() / ".budget-tracker" / "token.json"
+    google_sheets_retry_attempts: int = 3
+    google_sheets_retry_base_delay: float = 1.0  # seconds
+
     def load_categories(self) -> dict[str, Any]:
         """Load categories from YAML file."""
         with self.categories_file.open() as f:
