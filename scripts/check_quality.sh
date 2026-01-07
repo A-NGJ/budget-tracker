@@ -12,8 +12,8 @@ echo "2️⃣  Checking code formatting..."
 uv run ruff format src/ tests/ --check
 
 echo ""
-echo "3️⃣  Running mypy type checking..."
-uv run mypy src/ --strict
+echo "3️⃣  Runningty type checking..."
+uv run ty check src/
 
 echo ""
 echo "4️⃣  Running tests..."
