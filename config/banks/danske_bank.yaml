@@ -1,0 +1,13 @@
+bank_name: danske_bank
+column_mapping:
+  date_column: Dato
+  amount_column: "Bel\xF8b"
+  description_columns:
+  - Tekst
+  - Kategori
+  - Underkategori
+  currency_column: null
+date_format: '%d.%m.%Y'
+decimal_separator: ','
+default_currency: DKK
+blacklist_keywords: []
