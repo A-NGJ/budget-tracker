@@ -746,13 +746,13 @@ class TestSpreadsheetOperations:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Tests pass: `pytest tests/unit/test_google_sheets_client.py`
-- [ ] Type checking: `ty check`
-- [ ] Linting: `ruff check`
+- [x] Tests pass: `pytest tests/unit/test_google_sheets_client.py`
+- [x] Type checking: `ty check`
+- [x] Linting: `ruff check`
 
 #### Manual Verification:
-- [ ] Place a test `credentials.json` in `~/.budget-tracker/`
-- [ ] Write a small script to test authentication flow opens browser
+- [x] Place a test `credentials.json` in `~/.budget-tracker/`
+- [x] Write a small script to test authentication flow opens browser
 
 **Note**: Pause for manual confirmation before proceeding to next phase.
 
@@ -1116,12 +1116,12 @@ class TestExport:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Tests pass: `pytest tests/unit/test_google_sheets_exporter.py`
-- [ ] Type checking: `ty check`
-- [ ] Linting: `ruff check`
+- [x] Tests pass: `pytest tests/unit/test_google_sheets_exporter.py`
+- [x] Type checking: `ty check`
+- [x] Linting: `ruff check`
 
 #### Manual Verification:
-- [ ] With valid credentials, manually test exporting a few transactions to Google Sheets
+- [x] With valid credentials, manually test exporting a few transactions to Google Sheets
 
 **Note**: Pause for manual confirmation before proceeding to next phase.
 
@@ -1348,12 +1348,12 @@ default_currency: DKK
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Tests pass: `pytest tests/integration/test_cli_sheets.py`
-- [ ] Type checking: `ty check`
-- [ ] Linting: `ruff check`
+- [x] Tests pass: `pytest tests/integration/test_cli_sheets.py`
+- [x] Type checking: `ty check`
+- [x] Linting: `ruff check`
 
 #### Manual Verification:
-- [ ] Run `budget-tracker process --help` and verify --sheets flag appears
+- [x] Run `budget-tracker process --help` and verify --sheets flag appears
 - [ ] Run full flow: `budget-tracker process bank_export.csv -b danske_bank --sheets`
 - [ ] Verify CSV file created AND Google Sheet created/updated
 
