@@ -9,7 +9,7 @@ from budget_tracker.cli.confirmation import confirm_uncertain_categories
 from budget_tracker.cli.mapping import interactive_column_mapping, load_mapping, save_mapping
 from budget_tracker.config.settings import Settings, get_settings
 from budget_tracker.currency.converter import CurrencyConverter
-from budget_tracker.exporters import CSVExporter
+from budget_tracker.exporters import CSVExporter, GoogleSheetsExporter
 from budget_tracker.exporters.summary import print_summary
 from budget_tracker.models.transaction import StandardTransaction
 from budget_tracker.parsers.csv_parser import CSVParser, ParsedTransaction
@@ -39,7 +39,7 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         ctx.obj["settings"] = _settings
 
     @app.command()
-    def process(
+    def process( # noqa: PLR0915
         ctx: typer.Context,
         files: Annotated[list[Path], typer.Argument(help="CSV files to process")],
         banks: Annotated[
@@ -51,12 +51,16 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         output: Annotated[
             Path | None, typer.Option("--output", "-o", help="Output CSV file path")
         ] = None,
+        sheets: Annotated[
+            bool, typer.Option("--sheets", help="Export to Google Sheets.")
+        ] = False,
     ) -> None:
         """
         Process bank statement CSV files and generate standardized output.
 
         Examples:
             budget-tracker process bank1.csv
+            budget-tracker process bank1.csv -b danske_bank --sheets
             budget-tracker process bank1.csv bank2.csv --output results.csv
         """
         settings: Settings = ctx.obj["settings"]
@@ -156,11 +160,23 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
 
         # Step 5: Export
         output_file = output or (settings.output_dir / settings.default_output_filename)
-        exporter = CSVExporter(_settings, output_file=output_file)
-        result_file = exporter.export(standardized, output_file)
 
+        # Always export to CSV
+        csv_exporter = CSVExporter(_settings, output_file=output_file)
+        result_path = csv_exporter.export(standardized)
         console.print("\n[bold green]✓ Success![/bold green]")
-        console.print(f"Output written to: {result_file}")
+        console.print(f"Output written to: {result_path}")
+
+        # Optionally export to Google Sheets
+        if sheets:
+            console.print("\n[cyan]Exporting to Google Sheets...[/cyan]")
+            try:
+                sheets_exporter = GoogleSheetsExporter(_settings)
+                sheets_result = sheets_exporter.export(standardized)
+                console.print(f"[green]✓[/green] {sheets_result}")
+            except Exception as e:
+                console.print(f"[red]✗[/red] Google Sheets export failed: {e}")
+                console.print("[yellow]CSV export completed successfully.[/yellow]")
 
         # Print summary
         print_summary(standardized)

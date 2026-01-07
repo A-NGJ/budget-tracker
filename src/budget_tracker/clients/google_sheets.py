@@ -19,7 +19,10 @@ type CellValue = str | int | float
 
 console = Console()
 
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.file",  # Required to create spreadsheets
+]
 
 
 class GoogleSheetsAuthError(Exception):

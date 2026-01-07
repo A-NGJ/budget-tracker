@@ -1,4 +1,5 @@
 from budget_tracker.exporters.base import Exporter
 from budget_tracker.exporters.csv_exporter import CSVExporter
+from budget_tracker.exporters.google_sheets_exporter import GoogleSheetsExporter
 
-__all__ = ["CSVExporter", "Exporter"]
+__all__ = ["CSVExporter", "Exporter", "GoogleSheetsExporter"]
