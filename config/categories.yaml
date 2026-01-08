@@ -86,3 +86,7 @@ categories:
   - name: "Other"
     subcategories:
         - "Uncategorized"
+
+  - name: "Internal Transfer"
+    subcategories:
+      - "Transfer"

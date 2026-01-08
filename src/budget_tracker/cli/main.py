@@ -7,10 +7,12 @@ from rich.console import Console
 from budget_tracker.categorizer.llm_categorizer import LLMCategorizer
 from budget_tracker.cli.confirmation import confirm_uncertain_categories
 from budget_tracker.cli.mapping import interactive_column_mapping, load_mapping, save_mapping
+from budget_tracker.cli.transfer_confirmation import confirm_transfers
 from budget_tracker.config.settings import Settings, get_settings
 from budget_tracker.currency.converter import CurrencyConverter
 from budget_tracker.exporters import CSVExporter, GoogleSheetsExporter
 from budget_tracker.exporters.summary import print_summary
+from budget_tracker.filters import TransferDetector
 from budget_tracker.models.transaction import StandardTransaction
 from budget_tracker.parsers.csv_parser import CSVParser, ParsedTransaction
 from budget_tracker.utils.ollama import is_ollama_running
@@ -39,7 +41,7 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         ctx.obj["settings"] = _settings
 
     @app.command()
-    def process( # noqa: PLR0915
+    def process(  # noqa: PLR0915
         ctx: typer.Context,
         files: Annotated[list[Path], typer.Argument(help="CSV files to process")],
         banks: Annotated[
@@ -51,9 +53,7 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         output: Annotated[
             Path | None, typer.Option("--output", "-o", help="Output CSV file path")
         ] = None,
-        sheets: Annotated[
-            bool, typer.Option("--sheets", help="Export to Google Sheets.")
-        ] = False,
+        sheets: Annotated[bool, typer.Option("--sheets", help="Export to Google Sheets.")] = False,
     ) -> None:
         """
         Process bank statement CSV files and generate standardized output.
@@ -117,13 +117,56 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
             console.print(f"[green]✓[/green] Loaded {len(parsed_transactions)} transactions")
             all_parsed_transactions.extend(parsed_transactions)
 
+        # Step 1.5: Detect internal transfers
+        console.print("\n[cyan]Detecting internal transfers...[/cyan]")
+        detector = TransferDetector()
+        transfer_pairs, non_transfer_transactions = detector.detect(all_parsed_transactions)
+
+        # Confirm transfers with user
+        confirmed_transfers, rejected_transfers = confirm_transfers(transfer_pairs)
+
+        if confirmed_transfers:
+            console.print(
+                f"[green]✓[/green] {len(confirmed_transfers)} transfer(s) "
+                "will be marked as Internal Transfer"
+            )
+
+        # Rebuild transaction list: rejected transfers go back to normal processing
+        transactions_to_categorize = non_transfer_transactions.copy()
+        for pair in rejected_transfers:
+            transactions_to_categorize.append(pair.outgoing)
+            transactions_to_categorize.append(pair.incoming)
+
         # Step 2: Categorize with LLM and create StandardTransactions
         console.print("\n[cyan]Categorizing transactions with local LLM...[/cyan]")
         categorizer = LLMCategorizer(_settings)
         currency_converter = CurrencyConverter()
 
         standardized: list[StandardTransaction] = []
-        for parsed in all_parsed_transactions:
+
+        # First, add confirmed transers (Skip LLM categorization)
+        for pair in confirmed_transfers:
+            for parsed in [pair.outgoing, pair.incoming]:
+                amount_dkk = currency_converter.convert(
+                    amount=parsed.amount,
+                    from_currency=parsed.currency,
+                    to_currency="DKK",
+                    transaction_date=parsed.date,
+                )
+                standardized.append(
+                    StandardTransaction(
+                        date=parsed.date,
+                        category="Internal Transfer",
+                        subcategory="Transfer",
+                        amount=amount_dkk,
+                        source=parsed.source,
+                        description=parsed.description,
+                        confidence=1.0,  # User confirmed
+                    )
+                )
+
+        # Then categorize remaining transactions with LLM
+        for parsed in transactions_to_categorize:
             # Categorize using description
             categorized = categorizer.categorize(parsed.description)
 
