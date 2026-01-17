@@ -162,6 +162,20 @@ Some popular supermarkets:
 - Føtex
 
 They should be categorized as "Food & Drinks/Groceries"
+
+Examples:
+
+    User: Transaction description: "Andel Energi A/S"
+    Assistant: {{"category": "Housing", "subcategory": "Electricity", "confidence": 0.95}}
+
+    User: Transaction description: "Mieszkanie"
+    Assistant: {{"category": "Housing", "subcategory": "Rent", "confidence": 0.90}}
+
+    User: Transaction description: "Hellofresh Denmark"
+    Assistant: {{"category": "Food & Drinks", "subcategory": "Groceries", "confidence": 0.92}}
+
+    User: Transaction description: "Sygeforsikringen"
+    Assistant: {{"category": "Health", "subcategory": "Health Insurance", "confidence": 0.88}}
 """
         return prompt
 
