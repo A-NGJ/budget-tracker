@@ -5,11 +5,13 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings."""
+
+    model_config = SettingsConfigDict(env_prefix="BUDGET_TRACKER_")
 
     config_dir: Path = Path.cwd() / "config"
     data_dir: Path = Path.cwd() / "data"
@@ -31,6 +33,9 @@ class Settings(BaseSettings):
     google_token_file: Path = Path.home() / ".budget-tracker" / "token.json"
     google_sheets_retry_attempts: int = 3
     google_sheets_retry_base_delay: float = 1.0  # seconds
+
+    # CLI
+    no_interactive: bool = False  # If True, disable interactive prompts
 
     def load_categories(self) -> dict[str, Any]:
         """Load categories from YAML file."""
