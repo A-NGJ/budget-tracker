@@ -68,7 +68,7 @@ class GoogleSheetsExporter:
     def _ensure_header(self, worksheet: gspread.Worksheet) -> None:
         """Ensure worksheet has header row."""
         values = self._client.get_all_values(worksheet)
-        if len(values[0]) == 0: # Values returns a nested empty list for an empty sheet
+        if len(values[0]) == 0:  # Values returns a nested empty list for an empty sheet
             self._client.append_rows(worksheet, [SHEET_COLUMNS])
 
     def _group_by_year(

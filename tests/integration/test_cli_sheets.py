@@ -44,13 +44,13 @@ class TestSheetsFlag:
     @patch("budget_tracker.cli.main.CSVExporter")
     @patch("budget_tracker.cli.main.LLMCategorizer")
     @patch("budget_tracker.cli.main.CSVParser")
-    def test_sheets_flag_triggers_sheets_export( # noqa: PLR0913
+    def test_sheets_flag_triggers_sheets_export(  # noqa: PLR0913
         self,
         mock_parser: MagicMock,
         mock_categorizer: MagicMock,
         mock_csv_exporter: MagicMock,
         mock_sheets_exporter: MagicMock,
-        mock_ollama: MagicMock, # noqa: ARG002
+        mock_ollama: MagicMock,  # noqa: ARG002
         runner: CliRunner,
         settings: Settings,
         tmp_path: Path,
@@ -133,13 +133,13 @@ default_currency: DKK
     @patch("budget_tracker.cli.main.CSVExporter")
     @patch("budget_tracker.cli.main.LLMCategorizer")
     @patch("budget_tracker.cli.main.CSVParser")
-    def test_without_sheets_flag_no_sheets_export( # noqa: PLR0913
+    def test_without_sheets_flag_no_sheets_export(  # noqa: PLR0913
         self,
         mock_parser: MagicMock,
         mock_categorizer: MagicMock,
         mock_csv_exporter: MagicMock,
         mock_sheets_exporter: MagicMock,
-        mock_ollama: MagicMock, # noqa: ARG002
+        mock_ollama: MagicMock,  # noqa: ARG002
         runner: CliRunner,
         settings: Settings,
         tmp_path: Path,

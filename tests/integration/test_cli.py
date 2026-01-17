@@ -169,11 +169,11 @@ class TestEndToEnd:
     @patch("budget_tracker.cli.main.is_ollama_running", return_value=True)
     @patch("budget_tracker.cli.main.confirm_transfers")
     @patch("budget_tracker.cli.main.LLMCategorizer")
-    def test_process_with_transfers( # noqa: PLR0913
+    def test_process_with_transfers(  # noqa: PLR0913
         self,
         mock_categorizer_class: MagicMock,
         mock_confirm_transfers: MagicMock,
-        mock_ollama: MagicMock, # noqa: ARG002
+        mock_ollama: MagicMock,  # noqa: ARG002
         cli_runner: CliRunner,
         settings: Settings,
         sample_csv: Path,
@@ -209,7 +209,7 @@ class TestEndToEnd:
         mock_confirm_transfers.assert_called_once()
 
         # Verify the call received TransferPair objects
-        call_args = mock_confirm_transfers.call_args[0][0] # First positional arg
+        call_args = mock_confirm_transfers.call_args[0][0]  # First positional arg
         assert isinstance(call_args, list)
         # Should detect the 100.00 transfer pair (same amount, same date, different banks)
         assert len(call_args) >= 1

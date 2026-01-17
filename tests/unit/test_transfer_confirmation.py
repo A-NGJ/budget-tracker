@@ -64,7 +64,7 @@ class TestConfirmTransfers:
 
     @patch("budget_tracker.cli.transfer_confirmation.Prompt.ask")
     @patch("budget_tracker.cli.transfer_confirmation.console.print")
-    def test_accept_all(self, mock_print: MagicMock, mock_ask: MagicMock) -> None: # noqa: ARG002
+    def test_accept_all(self, mock_print: MagicMock, mock_ask: MagicMock) -> None:  # noqa: ARG002
         """Accept all remaining transfers."""
         mock_ask.return_value = "a"
         pairs = [make_pair("100"), make_pair("200"), make_pair("300")]

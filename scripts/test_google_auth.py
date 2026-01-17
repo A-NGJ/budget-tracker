@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Test script for Google Sheets authentication flow."""
+
 from datetime import date
 from decimal import Decimal
 
@@ -61,13 +62,15 @@ def main() -> None:
     exporter = GoogleSheetsExporter(settings, test_sheet_name)
 
     exporter.export(
-        [StandardTransaction(
-            date=date(2101, 6, 1),
-            category="Housing",
-            amount=Decimal("1.00"),
-            source="UnitTest",
-            description="Google Sheets API test",
-        )]
+        [
+            StandardTransaction(
+                date=date(2101, 6, 1),
+                category="Housing",
+                amount=Decimal("1.00"),
+                source="UnitTest",
+                description="Google Sheets API test",
+            )
+        ]
     )
 
     # try:
