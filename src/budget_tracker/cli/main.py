@@ -1,3 +1,4 @@
+from budget_tracker.cli.blacklist import interactive_blacklist_management
 from pathlib import Path
 from typing import Annotated
 
@@ -41,7 +42,7 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         ctx.obj["settings"] = _settings
 
     @app.command()
-    def process(  # noqa: PLR0915
+    def process(  # noqa: PLR0915, PLR0912
         ctx: typer.Context,
         files: Annotated[list[Path], typer.Argument(help="CSV files to process")],
         banks: Annotated[
@@ -243,6 +244,12 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         for yaml_file in sorted(yaml_files):
             bank_name = yaml_file.stem
             console.print(f"  • {bank_name}")
+
+    @app.command()
+    def blacklist(ctx: typer.Context) -> None:
+        """Interactively manage blacklist keywords for bank configurations"""
+        settings: Settings = ctx.obj["settings"]
+        interactive_blacklist_management(settings.banks_dir)
 
     return app
 
