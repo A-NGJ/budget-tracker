@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     banks_dir: Path = Path.cwd() / "config" / "banks"
 
     ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "deepseek-r1:7b"  # "llama3.2:3b"
+    ollama_model: str = "mistral"
     ollama_confidence_threshold: float = 0.9
 
     default_output_filename: str = "standardized_transactions.csv"

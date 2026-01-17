@@ -10,4 +10,5 @@ column_mapping:
 date_format: '%d.%m.%Y'
 decimal_separator: ','
 default_currency: DKK
-blacklist_keywords: []
+blacklist_keywords:
+- MobilePay
