@@ -101,12 +101,12 @@ def test_add_empty_keyword(
 
 
 @patch("budget_tracker.cli.blacklist.save_mapping")
-@patch("budget_tracker.cli.blacklist.Prompt.ask")
+@patch("budget_tracker.cli.blacklist.select_option")
 def test_remove_keyword(
-    mock_prompt: MagicMock, mock_save: MagicMock, sample_mapping: BankMapping, tmp_path: Path
+    mock_select: MagicMock, mock_save: MagicMock, sample_mapping: BankMapping, tmp_path: Path
 ) -> None:
     """Test removing a keyword from the blacklist."""
-    mock_prompt.return_value = "1"  # Remove first keyword (MobilePay)
+    mock_select.return_value = "MobilePay"  # Remove first keyword (MobilePay)
 
     remove_keyword(sample_mapping, tmp_path)
 
@@ -115,12 +115,12 @@ def test_remove_keyword(
     mock_save.assert_called_once()
 
 
-@patch("budget_tracker.cli.blacklist.Prompt.ask")
+@patch("budget_tracker.cli.blacklist.select_option")
 def test_remove_keyword_cancelled(
-    mock_prompt: MagicMock, sample_mapping: BankMapping, tmp_path: Path
+    mock_select: MagicMock, sample_mapping: BankMapping, tmp_path: Path
 ) -> None:
     """Test cancelling keyword removal."""
-    mock_prompt.return_value = ""  # Press Enter to cancel
+    mock_select.return_value = "(Cancel)"  # Press Enter to cancel
 
     original_keywords = sample_mapping.blacklist_keywords.copy()
     remove_keyword(sample_mapping, tmp_path)

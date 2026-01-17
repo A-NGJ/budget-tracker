@@ -5,6 +5,7 @@ from rich.prompt import Prompt
 from rich.table import Table
 
 from budget_tracker.cli.mapping import load_mapping, save_mapping
+from budget_tracker.cli.selection import select_option
 from budget_tracker.models.bank_mapping import BankMapping
 
 console = Console()
@@ -62,20 +63,17 @@ def remove_keyword(mapping: BankMapping, banks_dir: Path) -> None:
 
     display_blacklist(mapping)
 
-    choices = [str(i) for i in range(1, len(mapping.blacklist_keywords) + 1)]
-    choice = Prompt.ask(
-        "\nSelect keyword number to remove (or press Enter to cancel)",
-        choices=[*choices, ""],
-        default="",
-    )
 
-    if not choice:
+    keyword_choices = [*mapping.blacklist_keywords, "(Cancel)"]
+    selected = select_option("Select keyword to remove", keyword_choices, default="(Cancel)")
+
+    if selected == "(Cancel)":
         console.print("[dim]Cancelled[/dim]")
         return
 
-    keyword = mapping.blacklist_keywords.pop(int(choice) - 1)
+    mapping.blacklist_keywords.remove(selected)
     save_mapping(mapping, banks_dir)
-    console.print(f"[green]✓[/green] Removed '{keyword}' from {mapping.bank_name} blacklist")
+    console.print(f"[green]✓[/green] Removed '{selected}' from {mapping.bank_name} blacklist")
 
 
 def manage_bank_blacklist(mapping: BankMapping, banks_dir: Path) -> None:
@@ -83,17 +81,13 @@ def manage_bank_blacklist(mapping: BankMapping, banks_dir: Path) -> None:
     while True:
         display_blacklist(mapping)
 
-        console.print("\n[bold]Select action:[/bold]")
-        console.print(" 1. Add keyword")
-        console.print(" 2. Remove keyword")
-        console.print(" 3. Back")
+        action_choices = ["Add keyword", "Remove keyword", "Back"]
+        action = select_option("Select action", action_choices, default="Back")
 
-        choice = Prompt.ask("Enter choice", choices=["1", "2", "3"], default="3")
-
-        match choice:
-            case "1":
+        match action:
+            case "Add keyword":
                 add_keyword(mapping, banks_dir)
-            case "2":
+            case "Remove keyword":
                 remove_keyword(mapping, banks_dir)
             case _:
                 break
@@ -113,19 +107,13 @@ def interactive_blacklist_management(banks_dir: Path) -> None:
             )
             return
 
-        console.print("\n[bold]Abailable banks:[/bold]")
-        for i, b in enumerate(banks, start=1):
-            console.print(f"    {i}. {b}")
-        console.print(f"    {len(banks) + 1}. Exit")
+        bank_choices = [*banks, "Exit"]
+        bank_name = select_option("Select bank", bank_choices, default="Exit")
 
-        choices = [str(i) for i in range(1, len(banks) + 2)]
-        choice = Prompt.ask("Select bank", choices=choices, default=str(len(banks) + 1))
-
-        if int(choice) == len(banks) + 1:
+        if bank_name == "Exit":
             console.print("[dim]Exiting blacklist management[/dim]")
             break
 
-        bank_name = banks[int(choice) - 1]
         mapping = load_mapping(bank_name, banks_dir)
 
         if not mapping:

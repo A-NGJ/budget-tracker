@@ -58,8 +58,8 @@ dependencies = [
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] `uv sync` completes successfully
-- [ ] `python -c "import questionary; print(questionary.__version__)"` works
+- [x] `uv sync` completes successfully
+- [x] `python -c "import questionary; print(questionary.__version__)"` works
 
 ---
 
@@ -299,10 +299,10 @@ class TestRichSelect:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking: `ty check`
-- [ ] Linting: `ruff check`
-- [ ] Formatting: `ruff format --check`
-- [ ] Tests pass: `pytest tests/unit/test_selection.py -v`
+- [x] Type checking: `ty check`
+- [x] Linting: `ruff check`
+- [x] Formatting: `ruff format --check`
+- [x] Tests pass: `pytest tests/unit/test_selection.py -v`
 
 #### Manual Verification:
 - [ ] Module imports without error: `python -c "from budget_tracker.cli.selection import select_option"`
@@ -449,11 +449,11 @@ def test_remove_keyword_cancelled(mock_select, sample_mapping, tmp_path):
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking: `ty check`
-- [ ] Linting: `ruff check`
-- [ ] Formatting: `ruff format --check`
-- [ ] Tests pass: `pytest tests/unit/test_blacklist_cli.py -v`
-- [ ] All tests pass: `pytest tests/`
+- [x] Type checking: `ty check`
+- [x] Linting: `ruff check`
+- [x] Formatting: `ruff format --check`
+- [x] Tests pass: `pytest tests/unit/test_blacklist_cli.py -v`
+- [x] All tests pass: `pytest tests/`
 
 #### Manual Verification:
 - [ ] `budget-tracker blacklist` shows arrow-key navigation

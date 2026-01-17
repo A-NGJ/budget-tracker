@@ -1,4 +1,3 @@
-from budget_tracker.cli.blacklist import interactive_blacklist_management
 from pathlib import Path
 from typing import Annotated
 
@@ -6,6 +5,7 @@ import typer
 from rich.console import Console
 
 from budget_tracker.categorizer.llm_categorizer import LLMCategorizer
+from budget_tracker.cli.blacklist import interactive_blacklist_management
 from budget_tracker.cli.confirmation import confirm_uncertain_categories
 from budget_tracker.cli.mapping import interactive_column_mapping, load_mapping, save_mapping
 from budget_tracker.cli.transfer_confirmation import confirm_transfers
