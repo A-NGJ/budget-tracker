@@ -124,7 +124,6 @@ Replace sequential prompts with a state machine that tracks current step index a
 ```python
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any
 
 
 class MappingStep(Enum):
@@ -136,6 +135,13 @@ class MappingStep(Enum):
     DATE_FORMAT = auto()
     DECIMAL_SEPARATOR = auto()
     CONFIRM = auto()
+
+
+class StepResult(Enum):
+    NEXT = auto()
+    BACK = auto()
+    CANCEL = auto()
+    DONE = auto()
 
 
 @dataclass
@@ -177,15 +183,15 @@ def interactive_column_mapping(
 
         result = _execute_step(current_step, state, columns, file_path, allow_back)
 
-        if result == "back":
-            step_idx = max(0, step_idx - 1)
-        elif result == "cancel":
-            return None
-        elif result == "done":
-            # Build and return the mapping
-            return _build_mapping(state)
-        else:
-            step_idx += 1
+        match result:
+            case StepResult.BACK:
+                step_idx = max(0, step_idx - 1)
+            case StepResult.CANCEL:
+                return None
+            case StepResult.DONE:
+                return _build_mapping(state)
+            case StepResult.NEXT:
+                step_idx += 1
 
     return None
 ```
@@ -201,8 +207,8 @@ def _execute_step(
     columns: list[str],
     file_path: Path,
     allow_back: bool,
-) -> str:
-    """Execute a single step, returning 'next', 'back', 'cancel', or 'done'."""
+) -> StepResult:
+    """Execute a single step."""
     match step:
         case MappingStep.BANK_NAME:
             return _step_bank_name(state, file_path)
@@ -219,20 +225,20 @@ def _execute_step(
         case MappingStep.DECIMAL_SEPARATOR:
             return _step_decimal_separator(state, allow_back)
         case MappingStep.CONFIRM:
-            return _step_confirm(state)
-    return "next"
+            return _step_confirm(state, allow_back)
+    return StepResult.NEXT
 
 
-def _step_bank_name(state: MappingState, file_path: Path) -> str:
+def _step_bank_name(state: MappingState, file_path: Path) -> StepResult:
     """Step 1: Bank name (no back from first step)."""
     state.bank_name = Prompt.ask(
         "Enter bank name (e.g., 'Danske Bank', 'Nordea')",
         default=state.bank_name or file_path.stem,
     )
-    return "next"
+    return StepResult.NEXT
 
 
-def _step_date_column(state: MappingState, columns: list[str], allow_back: bool) -> str:
+def _step_date_column(state: MappingState, columns: list[str], allow_back: bool) -> StepResult:
     """Step 2: Date column selection."""
     result = select_option(
         "Which column contains the transaction date?",
@@ -241,12 +247,12 @@ def _step_date_column(state: MappingState, columns: list[str], allow_back: bool)
         allow_back=allow_back,
     )
     if result is None:
-        return "back"
+        return StepResult.BACK
     state.date_col = result
-    return "next"
+    return StepResult.NEXT
 
 
-def _step_amount_column(state: MappingState, columns: list[str], allow_back: bool) -> str:
+def _step_amount_column(state: MappingState, columns: list[str], allow_back: bool) -> StepResult:
     """Step 3: Amount column selection."""
     result = select_option(
         "Which column contains the transaction amount?",
@@ -255,14 +261,14 @@ def _step_amount_column(state: MappingState, columns: list[str], allow_back: boo
         allow_back=allow_back,
     )
     if result is None:
-        return "back"
+        return StepResult.BACK
     state.amount_col = result
-    return "next"
+    return StepResult.NEXT
 
 
 def _step_description_columns(
     state: MappingState, columns: list[str], allow_back: bool
-) -> str:
+) -> StepResult:
     """Step 4: Description column(s) selection."""
     console.print("\n[bold]Description Column(s)[/bold]")
     console.print("You can select one or more columns to combine into the description.")
@@ -296,28 +302,23 @@ def _step_description_columns(
             allow_back=allow_back,
         )
         if desc_col is None:
-            if desc_cols:
-                # Already have some selections, let them go back to previous step
-                return "back"
-            else:
-                return "back"
+            return StepResult.BACK
         desc_cols.append(desc_col)
 
     if not desc_cols:
         console.print("[red]Error: At least one description column is required[/red]")
-        return "back"  # Go back to try again
+        return StepResult.BACK  # Go back to try again
 
     state.desc_cols = desc_cols
-    return "next"
+    return StepResult.NEXT
 
 
 def _step_currency_config(
     state: MappingState, columns: list[str], allow_back: bool
-) -> str:
+) -> StepResult:
     """Step 5: Currency configuration."""
     console.print("\n[bold]Currency Configuration[/bold]")
 
-    # Use select_option for y/n to support Ctrl+B
     has_currency_choices = ["Yes - CSV has a currency column", "No - use default currency"]
     default_currency_choice = has_currency_choices[0] if state.has_currency_column else has_currency_choices[1]
 
@@ -329,7 +330,7 @@ def _step_currency_config(
     )
 
     if has_currency_selection is None:
-        return "back"
+        return StepResult.BACK
 
     state.has_currency_column = has_currency_selection.startswith("Yes")
 
@@ -341,7 +342,7 @@ def _step_currency_config(
             allow_back=allow_back,
         )
         if result is None:
-            return "back"
+            return StepResult.BACK
         state.currency_col = result
     else:
         state.currency_col = None
@@ -370,7 +371,7 @@ def _step_currency_config(
         )
 
         if currency_selection is None:
-            return "back"
+            return StepResult.BACK
 
         if currency_selection == "Other":
             state.default_currency = Prompt.ask(
@@ -380,10 +381,10 @@ def _step_currency_config(
         else:
             state.default_currency = currency_selection.split()[0]
 
-    return "next"
+    return StepResult.NEXT
 
 
-def _step_date_format(state: MappingState, allow_back: bool) -> str:
+def _step_date_format(state: MappingState, allow_back: bool) -> StepResult:
     """Step 6: Date format selection."""
     console.print("\n[bold]Date Format Configuration[/bold]")
 
@@ -421,7 +422,7 @@ def _step_date_format(state: MappingState, allow_back: bool) -> str:
     )
 
     if date_format_selection is None:
-        return "back"
+        return StepResult.BACK
 
     if date_format_selection == "Other":
         console.print("\nEnter custom date format using Python strftime codes:")
@@ -434,10 +435,10 @@ def _step_date_format(state: MappingState, allow_back: bool) -> str:
     else:
         state.date_format = date_format_map[date_format_selection]
 
-    return "next"
+    return StepResult.NEXT
 
 
-def _step_decimal_separator(state: MappingState, allow_back: bool) -> str:
+def _step_decimal_separator(state: MappingState, allow_back: bool) -> StepResult:
     """Step 7: Decimal separator selection."""
     console.print("\n[bold]Decimal Separator Configuration[/bold]")
 
@@ -461,13 +462,13 @@ def _step_decimal_separator(state: MappingState, allow_back: bool) -> str:
     )
 
     if decimal_selection is None:
-        return "back"
+        return StepResult.BACK
 
     state.decimal_separator = "." if decimal_selection.startswith(".") else ","
-    return "next"
+    return StepResult.NEXT
 
 
-def _step_confirm(state: MappingState) -> str:
+def _step_confirm(state: MappingState, allow_back: bool) -> StepResult:
     """Final confirmation step."""
     console.print("\n[bold green]Mapping created:[/bold green]")
     console.print(f"  Bank: {state.bank_name}")
@@ -477,24 +478,36 @@ def _step_confirm(state: MappingState) -> str:
     console.print(f"  Currency: {state.currency_col or state.default_currency}")
     console.print(f"  Decimal separator: {state.decimal_separator}")
 
-    # Use select_option for final confirmation to support Ctrl+B
-    save_choices = ["Yes - save this mapping", "No - cancel", "← Go Back"]
+    save_choices = ["Yes - save this mapping", "No - cancel"]
     save_selection = select_option(
         "Save this mapping?",
         save_choices,
         default="Yes - save this mapping",
-        allow_back=False,  # Back option already in choices
+        allow_back=allow_back,
     )
 
-    if save_selection == "← Go Back":
-        return "back"
+    if save_selection is None:
+        return StepResult.BACK
     if save_selection.startswith("Yes"):
-        return "done"
-    return "cancel"
+        return StepResult.DONE
+    return StepResult.CANCEL
 
 
 def _build_mapping(state: MappingState) -> BankMapping:
     """Build BankMapping from collected state."""
+    if state.bank_name is None:
+        raise ValueError("bank_name is required")
+    if state.date_col is None:
+        raise ValueError("date_col is required")
+    if state.amount_col is None:
+        raise ValueError("amount_col is required")
+    if not state.desc_cols:
+        raise ValueError("desc_cols is required")
+    if state.date_format is None:
+        raise ValueError("date_format is required")
+    if state.decimal_separator is None:
+        raise ValueError("decimal_separator is required")
+
     return BankMapping(
         bank_name=state.bank_name,
         column_mapping=ColumnMapping(
@@ -512,9 +525,9 @@ def _build_mapping(state: MappingState) -> BankMapping:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Type checking: `ty check`
-- [ ] Linting: `ruff check`
-- [ ] Formatting: `ruff format --check`
+- [x] Type checking: `ty check`
+- [x] Linting: `ruff check`
+- [x] Formatting: `ruff format --check`
 
 #### Manual Verification:
 - [ ] Run `budget-tracker process` with a new bank CSV
@@ -589,7 +602,7 @@ def test_previous_selection_remembered():
 - `select_option()` with `allow_back=True` adds "← Go Back" option
 - `select_option()` returns `None` when back is selected
 - `MappingState` correctly tracks and preserves values
-- Each `_step_*` function returns "back" when back is selected
+- Each `_step_*` function returns `StepResult.BACK` when back is selected
 - Step index decrements correctly on back navigation
 
 ### Manual Testing:
