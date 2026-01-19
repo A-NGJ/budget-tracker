@@ -66,7 +66,7 @@ def remove_keyword(mapping: BankMapping, banks_dir: Path) -> None:
     keyword_choices = [*mapping.blacklist_keywords, "(Cancel)"]
     selected = select_option("Select keyword to remove", keyword_choices, default="(Cancel)")
 
-    if selected == "(Cancel)":
+    if selected is None or selected == "(Cancel)":
         console.print("[dim]Cancelled[/dim]")
         return
 
@@ -109,7 +109,7 @@ def interactive_blacklist_management(banks_dir: Path) -> None:
         bank_choices = [*banks, "Exit"]
         bank_name = select_option("Select bank", bank_choices, default="Exit")
 
-        if bank_name == "Exit":
+        if bank_name is None or bank_name == "Exit":
             console.print("[dim]Exiting blacklist management[/dim]")
             break
 
