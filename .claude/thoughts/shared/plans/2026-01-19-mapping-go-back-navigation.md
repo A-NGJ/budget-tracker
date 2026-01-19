@@ -544,48 +544,346 @@ def _build_mapping(state: MappingState) -> BankMapping:
 ### Overview
 Add unit tests for the back navigation in `select_option()` and the refactored mapping flow.
 
+### Current Test State
+- **test_selection.py**: Has tests for `select_option()` but not the `allow_back` parameter
+- **test_mapping.py**: Minimal tests focused on YAML save/load - no tests for step-based navigation
+- **Mocking pattern**: Uses `@patch` decorators with `MagicMock`
+- **Test style**: Class-based grouping (`Test*` classes)
+
 ### Changes Required:
 
 #### 1. Update selection tests
 **File**: `tests/unit/test_selection.py`
-**Changes**: Add tests for `allow_back` parameter
+**Changes**: Add `TestSelectOptionWithBackNavigation` class
 
 ```python
-def test_select_option_with_back_option():
-    """Test that allow_back adds '← Go Back' to choices."""
-    # Test that the back option is added
-    # Test that selecting back returns None
+class TestSelectOptionWithBackNavigation:
+    """Tests for allow_back parameter in select_option."""
 
+    @patch("budget_tracker.cli.selection.is_interactive_terminal", return_value=False)
+    @patch("budget_tracker.cli.selection._rich_select")
+    def test_allow_back_adds_go_back_option_to_choices(
+        self,
+        mock_rich: MagicMock,
+        mock_is_interactive: MagicMock,
+    ) -> None:
+        """Verify '← Go Back' is appended to choices when allow_back=True."""
+        mock_rich.return_value = "Option 1"
 
-def test_select_option_back_returns_none():
-    """Test that selecting back returns None."""
-    pass
+        select_option("Choose:", ["Option 1", "Option 2"], allow_back=True)
+
+        # Check that "← Go Back" was added to the choices
+        call_args = mock_rich.call_args[0]
+        assert call_args[1] == ["Option 1", "Option 2", "← Go Back"]
+
+    @patch("budget_tracker.cli.selection.is_interactive_terminal", return_value=False)
+    @patch("budget_tracker.cli.selection._rich_select")
+    def test_selecting_go_back_returns_none(
+        self,
+        mock_rich: MagicMock,
+        mock_is_interactive: MagicMock,
+    ) -> None:
+        """Verify selecting '← Go Back' returns None."""
+        mock_rich.return_value = "← Go Back"
+
+        result = select_option("Choose:", ["Option 1", "Option 2"], allow_back=True)
+
+        assert result is None
+
+    @patch("budget_tracker.cli.selection.is_interactive_terminal", return_value=False)
+    @patch("budget_tracker.cli.selection._rich_select")
+    def test_selecting_regular_option_returns_value(
+        self,
+        mock_rich: MagicMock,
+        mock_is_interactive: MagicMock,
+    ) -> None:
+        """Verify selecting a regular option still returns that option."""
+        mock_rich.return_value = "Option 2"
+
+        result = select_option("Choose:", ["Option 1", "Option 2"], allow_back=True)
+
+        assert result == "Option 2"
+
+    @patch("budget_tracker.cli.selection.is_interactive_terminal", return_value=False)
+    @patch("budget_tracker.cli.selection._rich_select")
+    def test_allow_back_false_does_not_add_option(
+        self,
+        mock_rich: MagicMock,
+        mock_is_interactive: MagicMock,
+    ) -> None:
+        """Verify allow_back=False (default) doesn't add Go Back option."""
+        mock_rich.return_value = "Option 1"
+
+        select_option("Choose:", ["Option 1", "Option 2"], allow_back=False)
+
+        call_args = mock_rich.call_args[0]
+        assert "← Go Back" not in call_args[1]
 ```
 
 #### 2. Add mapping flow tests
 **File**: `tests/unit/test_mapping.py`
-**Changes**: Add tests for step-based navigation
+**Changes**: Add fixtures and test classes for MappingState, step functions, navigation flow, and _build_mapping
+
+##### Fixtures to Add:
 
 ```python
-def test_mapping_state_initialization():
-    """Test MappingState defaults."""
-    pass
+@pytest.fixture
+def sample_columns() -> list[str]:
+    """Standard column list for testing."""
+    return ["Date", "Amount", "Description", "Category", "Currency"]
 
 
-def test_step_navigation_forward():
-    """Test that steps progress forward correctly."""
-    pass
-
-
-def test_step_navigation_backward():
-    """Test that going back returns to previous step."""
-    pass
-
-
-def test_previous_selection_remembered():
-    """Test that state preserves selections when going back."""
-    pass
+@pytest.fixture
+def complete_state() -> MappingState:
+    """Fully populated MappingState for testing."""
+    return MappingState(
+        bank_name="Test Bank",
+        date_col="Date",
+        amount_col="Amount",
+        desc_cols=["Description"],
+        currency_col=None,
+        default_currency="DKK",
+        date_format="%Y-%m-%d",
+        decimal_separator=".",
+    )
 ```
+
+##### Test Classes:
+
+```python
+class TestMappingState:
+    """Test MappingState dataclass initialization and defaults."""
+
+    def test_initializes_with_none_values(self) -> None:
+        """Verify MappingState fields initialize to expected defaults."""
+        state = MappingState()
+
+        assert state.bank_name is None
+        assert state.date_col is None
+        assert state.amount_col is None
+        assert state.desc_cols == []
+        assert state.currency_col is None
+        assert state.default_currency == "DKK"
+        assert state.has_currency_column is False
+        assert state.date_format is None
+        assert state.decimal_separator is None
+
+    def test_desc_cols_uses_independent_list(self) -> None:
+        """Verify each MappingState instance has its own desc_cols list."""
+        state1 = MappingState()
+        state2 = MappingState()
+
+        state1.desc_cols.append("Description")
+
+        assert state2.desc_cols == []  # Should not be affected
+
+    def test_accepts_initial_values(self) -> None:
+        """Verify MappingState accepts initial values."""
+        state = MappingState(
+            bank_name="Test Bank",
+            date_col="Date",
+            default_currency="EUR",
+        )
+
+        assert state.bank_name == "Test Bank"
+        assert state.date_col == "Date"
+        assert state.default_currency == "EUR"
+
+
+class TestStepDateColumn:
+    """Tests for _step_date_column."""
+
+    @patch("budget_tracker.cli.mapping.select_option")
+    def test_returns_back_when_none_selected(
+        self, mock_select: MagicMock
+    ) -> None:
+        """Verify BACK is returned when select_option returns None."""
+        mock_select.return_value = None
+        state = MappingState()
+
+        result = _step_date_column(state, ["Date", "Amount"], allow_back=True)
+
+        assert result == StepResult.BACK
+        assert state.date_col is None  # State unchanged
+
+    @patch("budget_tracker.cli.mapping.select_option")
+    def test_stores_selection_and_returns_next(
+        self, mock_select: MagicMock
+    ) -> None:
+        """Verify selection is stored and NEXT is returned."""
+        mock_select.return_value = "Date"
+        state = MappingState()
+
+        result = _step_date_column(state, ["Date", "Amount"], allow_back=True)
+
+        assert result == StepResult.NEXT
+        assert state.date_col == "Date"
+
+    @patch("budget_tracker.cli.mapping.select_option")
+    def test_passes_previous_selection_as_default(
+        self, mock_select: MagicMock
+    ) -> None:
+        """Verify previous selection is passed as default when going back."""
+        mock_select.return_value = "Date"
+        state = MappingState(date_col="Amount")  # Previous selection
+
+        _step_date_column(state, ["Date", "Amount"], allow_back=True)
+
+        # Verify default was passed
+        call_kwargs = mock_select.call_args
+        assert call_kwargs[1]["default"] == "Amount"
+
+
+class TestInteractiveColumnMappingNavigation:
+    """Tests for step-based navigation in interactive_column_mapping."""
+
+    @pytest.fixture
+    def sample_columns(self) -> list[str]:
+        return ["Date", "Amount", "Description", "Currency"]
+
+    @patch("budget_tracker.cli.mapping._execute_step")
+    @patch("budget_tracker.cli.mapping._build_mapping")
+    @patch("budget_tracker.cli.mapping.console.print")
+    def test_forward_navigation_increments_step(
+        self,
+        mock_print: MagicMock,
+        mock_build: MagicMock,
+        mock_execute: MagicMock,
+        sample_columns: list[str],
+    ) -> None:
+        """Verify NEXT result moves to next step."""
+        mock_execute.side_effect = [
+            StepResult.NEXT,
+            StepResult.NEXT,
+            StepResult.DONE,
+        ]
+        mock_build.return_value = MagicMock()
+
+        interactive_column_mapping(sample_columns)
+
+        # Should have called execute 3 times for steps 0, 1, 2
+        assert mock_execute.call_count == 3
+
+    @patch("budget_tracker.cli.mapping._execute_step")
+    @patch("budget_tracker.cli.mapping.console.print")
+    def test_back_navigation_decrements_step(
+        self,
+        mock_print: MagicMock,
+        mock_execute: MagicMock,
+        sample_columns: list[str],
+    ) -> None:
+        """Verify BACK result moves to previous step."""
+        mock_execute.side_effect = [
+            StepResult.NEXT,  # Step 0 → 1
+            StepResult.NEXT,  # Step 1 → 2
+            StepResult.BACK,  # Step 2 → 1
+            StepResult.CANCEL,  # Exit
+        ]
+
+        interactive_column_mapping(sample_columns)
+
+        # Step 1 should be called twice (forward and after back)
+        assert mock_execute.call_count == 4
+
+    @patch("budget_tracker.cli.mapping._execute_step")
+    @patch("budget_tracker.cli.mapping.console.print")
+    def test_back_from_first_step_stays_at_first(
+        self,
+        mock_print: MagicMock,
+        mock_execute: MagicMock,
+        sample_columns: list[str],
+    ) -> None:
+        """Verify BACK from step 0 stays at step 0."""
+        mock_execute.side_effect = [
+            StepResult.BACK,  # Can't go back, stays at 0
+            StepResult.CANCEL,  # Exit
+        ]
+
+        interactive_column_mapping(sample_columns)
+
+        # First step should be called twice
+        assert mock_execute.call_count == 2
+        # Both calls should be for step index 0 (MappingStep.BANK_NAME)
+        first_call_step = mock_execute.call_args_list[0][0][0]
+        second_call_step = mock_execute.call_args_list[1][0][0]
+        assert first_call_step == MappingStep.BANK_NAME
+        assert second_call_step == MappingStep.BANK_NAME
+
+    @patch("budget_tracker.cli.mapping._execute_step")
+    @patch("budget_tracker.cli.mapping.console.print")
+    def test_cancel_returns_none(
+        self,
+        mock_print: MagicMock,
+        mock_execute: MagicMock,
+        sample_columns: list[str],
+    ) -> None:
+        """Verify CANCEL result returns None from flow."""
+        mock_execute.return_value = StepResult.CANCEL
+
+        result = interactive_column_mapping(sample_columns)
+
+        assert result is None
+
+
+class TestBuildMapping:
+    """Tests for _build_mapping validation."""
+
+    def test_raises_on_missing_bank_name(self) -> None:
+        """Verify ValueError raised when bank_name is None."""
+        state = MappingState(
+            date_col="Date",
+            amount_col="Amount",
+            desc_cols=["Description"],
+            date_format="%Y-%m-%d",
+            decimal_separator=".",
+        )
+
+        with pytest.raises(ValueError, match="bank_name is required"):
+            _build_mapping(state)
+
+    def test_raises_on_empty_desc_cols(self) -> None:
+        """Verify ValueError raised when desc_cols is empty."""
+        state = MappingState(
+            bank_name="Test Bank",
+            date_col="Date",
+            amount_col="Amount",
+            desc_cols=[],  # Empty!
+            date_format="%Y-%m-%d",
+            decimal_separator=".",
+        )
+
+        with pytest.raises(ValueError, match="desc_cols is required"):
+            _build_mapping(state)
+
+    def test_builds_valid_mapping(self) -> None:
+        """Verify valid state produces correct BankMapping."""
+        state = MappingState(
+            bank_name="Test Bank",
+            date_col="Date",
+            amount_col="Amount",
+            desc_cols=["Description", "Category"],
+            currency_col="Currency",
+            default_currency="EUR",
+            date_format="%d-%m-%Y",
+            decimal_separator=",",
+        )
+
+        result = _build_mapping(state)
+
+        assert result.bank_name == "Test Bank"
+        assert result.column_mapping.date_column == "Date"
+        assert result.column_mapping.description_columns == ["Description", "Category"]
+        assert result.default_currency == "EUR"
+        assert result.decimal_separator == ","
+```
+
+### Implementation Order
+
+1. **Add selection tests first** - Quick wins, validates `allow_back` parameter
+2. **Add MappingState tests** - Validates dataclass behavior
+3. **Add _build_mapping tests** - Validates final output
+4. **Add step function tests** - One representative step (date_column)
+5. **Add navigation flow tests** - Integration of step loop
 
 ### Success Criteria:
 
