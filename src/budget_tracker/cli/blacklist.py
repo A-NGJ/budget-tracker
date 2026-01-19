@@ -63,7 +63,6 @@ def remove_keyword(mapping: BankMapping, banks_dir: Path) -> None:
 
     display_blacklist(mapping)
 
-
     keyword_choices = [*mapping.blacklist_keywords, "(Cancel)"]
     selected = select_option("Select keyword to remove", keyword_choices, default="(Cancel)")
 

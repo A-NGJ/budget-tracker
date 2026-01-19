@@ -1,6 +1,7 @@
 from rich.console import Console
 from rich.prompt import Prompt
 
+from budget_tracker.cli.selection import select_option
 from budget_tracker.config.settings import Settings
 from budget_tracker.models.transaction import StandardTransaction
 
@@ -67,35 +68,27 @@ def confirm_uncertain_categories(
             transaction.confidence = 1.0
         elif choice == "n":
             # Let user pick category
-            console.print("\nAvailable categories:")
-            for i, cat in enumerate(category_names, 1):
-                console.print(f"  {i}. {cat}")
+            new_category = select_option("\nSelect category", category_names)
 
-            cat_choice = Prompt.ask(
-                "Select category number",
-                choices=[str(i) for i in range(1, len(category_names) + 1)],
-            )
-
-            console.print(f"\nAvailable subcategories for {category_names[int(cat_choice) - 1]}:")
-            subcat_list = subcategories[int(cat_choice) - 1]
+            cat_index = category_names.index(new_category)
+            subcat_list = subcategories[cat_index]
             if subcat_list:
-                for i, subcat in enumerate(subcat_list, 1):
-                    console.print(f"  {i}. {subcat}")
-                subcat_choice = Prompt.ask(
-                    "Select subcategory number (or press Enter to skip)",
-                    choices=[str(i) for i in range(1, len(subcat_list) + 1)] + [""],
-                    default="",
+                subcat_choices = [*subcat_list, "(Skip)"]
+                subcat_selection = select_option(
+                    f"Select subcategory for {new_category}",
+                    subcat_choices,
+                    default="(Skip)",
                 )
-                new_subcategory = subcat_list[int(subcat_choice) - 1] if subcat_choice else None
+                new_subcategory = None if subcat_selection == "(Skip)" else subcat_selection
             else:
-                console.print("  (No subcategories available)")
+                console.print(f"  (No subcategories available for {new_category})")
                 new_subcategory = None
-            new_category = category_names[int(cat_choice) - 1]
+
             transaction.category = new_category
             transaction.subcategory = new_subcategory  # Clear subcategory when changing category
             transaction.confidence = 1.0  # User-confirmed
             # Cache the user's choice
-            confirmed_cache[transaction.description] = (new_category, None)
+            confirmed_cache[transaction.description] = (new_category, new_subcategory)
         else:  # skip
             transaction.category = "Other"
             transaction.subcategory = "Uncategorized"
