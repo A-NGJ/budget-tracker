@@ -76,7 +76,11 @@ def interactive_column_mapping(
                 return None
             case StepResult.DONE:
                 # Build and return the mapping
-                return _build_mapping(state)
+                try:
+                    return _build_mapping(state)
+                except ValueError as e:
+                    console.print(f"[red]Error:[/red] {e}")
+                    return None
             case StepResult.NEXT:
                 step_index += 1
 
