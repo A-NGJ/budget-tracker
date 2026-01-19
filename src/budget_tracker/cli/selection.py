@@ -37,7 +37,8 @@ def select_option(
     message: str,
     choices: list[str],
     default: str | None = None,
-) -> str:
+    allow_back: bool = False,
+) -> str | None:
     """Display an interactive selection menu.
 
     Uses questionary with arrow-key navigation on capable terminals,
@@ -47,13 +48,23 @@ def select_option(
         message: The prompt message to display
         choices: List of options to choose from
         default: Default selection (optional)
+        allow_back: If True, adds "<- Go Back" option and enables Ctrl+B shortcut
 
     Returns:
         The selected option string
     """
+    if allow_back:
+        choices = [*choices, "<- Go Back"]
+
     if is_interactive_terminal(get_settings()):
-        return _questionary_select(message, choices, default)
-    return _rich_select(message, choices, default)
+        result = _questionary_select(message, choices, default)
+    else:
+        result = _rich_select(message, choices, default)
+
+    if result == "<- Go Back":
+        return None
+
+    return result
 
 
 def _questionary_select(
