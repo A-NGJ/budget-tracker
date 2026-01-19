@@ -69,6 +69,9 @@ def confirm_uncertain_categories(
         elif choice == "n":
             # Let user pick category
             new_category = select_option("\nSelect category", category_names)
+            if new_category is None:
+                console.print("  [red]Application error.[/red]")
+                raise KeyboardInterrupt
 
             cat_index = category_names.index(new_category)
             subcat_list = subcategories[cat_index]

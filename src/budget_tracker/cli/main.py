@@ -104,7 +104,7 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
                     f"[yellow]No mapping found for '{banks[i]}'. Creating new mapping...[/yellow]"
                 )
 
-                mapping = interactive_column_mapping(file, columns, bank_name=banks[i])
+                mapping = interactive_column_mapping(columns, bank_name=banks[i])
                 if not mapping:
                     console.print("[red]Mapping cancelled[/red]")
                     raise typer.Exit(1)
