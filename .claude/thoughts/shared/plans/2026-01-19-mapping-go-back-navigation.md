@@ -888,9 +888,9 @@ class TestBuildMapping:
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] All tests pass: `pytest tests/unit/test_selection.py tests/unit/test_mapping.py -v`
-- [ ] Type checking: `ty check`
-- [ ] Linting: `ruff check`
+- [x] All tests pass: `pytest tests/unit/test_selection.py tests/unit/test_mapping.py -v`
+- [x] Type checking: `ty check`
+- [x] Linting: `ruff check`
 
 ---
 

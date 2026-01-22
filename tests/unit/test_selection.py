@@ -118,3 +118,66 @@ class TestRichSelect:
         mock_prompt.assert_called_once()
         call_kwargs = mock_prompt.call_args[1]
         assert call_kwargs["default"] == "2"  # Banana is index 1, so number 2
+
+
+class TestSelectOptionWithBackNavigation:
+    """Tests for allow_back parameter in select_option"""
+
+    @patch("budget_tracker.cli.selection.is_interactive_terminal", return_value=False)
+    @patch("budget_tracker.cli.selection._rich_select")
+    def test_allow_back_adds_go_back_option_to_choices(
+        self,
+        mock_rich: MagicMock,
+        mock_is_interactive: MagicMock,  # noqa: ARG002
+    ) -> None:
+        """Verify "<- Go back" is appended to choices when allow_back=True"""
+        mock_rich.return_value = "<- Go back"
+
+        select_option("Choose:", ["Option 1", "Option 2"], allow_back=True)
+
+        # Check that "<- Go Back" was added to the choices
+        call_args = mock_rich.call_args[0]
+        assert call_args[1] == ["Option 1", "Option 2", "<- Go Back"]
+
+    @patch("budget_tracker.cli.selection.is_interactive_terminal", return_value=False)
+    @patch("budget_tracker.cli.selection._rich_select")
+    def test_selecting_go_back_returns_none(
+        self,
+        mock_rich: MagicMock,
+        mock_is_interactive: MagicMock,  # noqa: ARG002
+    ) -> None:
+        """Verify selecting '← Go Back' returns None."""
+        mock_rich.return_value = "<- Go Back"
+
+        result = select_option("Choose:", ["Option 1", "Option 2"], allow_back=True)
+
+        assert result is None
+
+    @patch("budget_tracker.cli.selection.is_interactive_terminal", return_value=False)
+    @patch("budget_tracker.cli.selection._rich_select")
+    def test_selecting_regular_option_returns_value(
+        self,
+        mock_rich: MagicMock,
+        mock_is_interactive: MagicMock,  # noqa: ARG002
+    ) -> None:
+        """Verify selecting a regular option still returns that option."""
+        mock_rich.return_value = "Option 2"
+
+        result = select_option("Choose:", ["Option 1", "Option 2"], allow_back=True)
+
+        assert result == "Option 2"
+
+    @patch("budget_tracker.cli.selection.is_interactive_terminal", return_value=False)
+    @patch("budget_tracker.cli.selection._rich_select")
+    def test_allow_back_false_does_not_add_option(
+        self,
+        mock_rich: MagicMock,
+        mock_is_interactive: MagicMock,  # noqa: ARG002
+    ) -> None:
+        """Verify allow_back=False (default) doesn't add Go Back option."""
+        mock_rich.return_value = "Option 1"
+
+        select_option("Choose:", ["Option 1", "Option 2"], allow_back=False)
+
+        call_args = mock_rich.call_args[0]
+        assert "← Go Back" not in call_args[1]
