@@ -5,7 +5,7 @@ from datetime import date
 from decimal import Decimal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
+from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
 
 from budget_tracker.config.settings import get_settings
 
@@ -13,7 +13,7 @@ from budget_tracker.config.settings import get_settings
 class StandardTransaction(BaseModel):
     """Standardized transaction format."""
 
-    model_config = ConfigDict(frozen=False)  # Allow modifications for LLM categorization
+    model_config = ConfigDict(frozen=False)  # Allow modifications for categorization
 
     date: date
     category: str
@@ -21,7 +21,6 @@ class StandardTransaction(BaseModel):
     amount: Decimal
     source: str  # Bank name
     description: str | None = None  # Original description
-    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
 
     @field_validator("category")
     @classmethod

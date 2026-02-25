@@ -20,10 +20,6 @@ class Settings(BaseSettings):
     categories_file: Path = Path.cwd() / "config" / "categories.yaml"
     banks_dir: Path = Path.cwd() / "config" / "banks"
 
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "mistral"
-    ollama_confidence_threshold: float = 0.9
-
     default_output_filename: str = "standardized_transactions.csv"
     default_date_format: str = "%d-%m-%Y"  # DD-MM-YYYY format
 
