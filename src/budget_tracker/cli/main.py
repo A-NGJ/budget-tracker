@@ -4,9 +4,8 @@ from typing import Annotated
 import typer
 from rich.console import Console
 
-from budget_tracker.categorizer.llm_categorizer import LLMCategorizer
 from budget_tracker.cli.blacklist import interactive_blacklist_management
-from budget_tracker.cli.confirmation import confirm_uncertain_categories
+from budget_tracker.cli.confirmation import categorize_transactions
 from budget_tracker.cli.mapping import interactive_column_mapping, load_mapping, save_mapping
 from budget_tracker.cli.transfer_confirmation import confirm_transfers
 from budget_tracker.config.settings import Settings, get_settings
@@ -16,7 +15,6 @@ from budget_tracker.exporters.summary import print_summary
 from budget_tracker.filters import TransferDetector
 from budget_tracker.models.transaction import StandardTransaction
 from budget_tracker.parsers.csv_parser import CSVParser, ParsedTransaction
-from budget_tracker.utils.ollama import is_ollama_running
 
 console = Console()
 
@@ -67,12 +65,6 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         settings: Settings = ctx.obj["settings"]
 
         console.print("[bold]Budget Tracker - Bank Statement Normalizer[/bold]\n")
-
-        if not is_ollama_running():
-            console.print(
-                "[red]✗[/red] Ollama server is not running. Please start it and try again."
-            )
-            raise typer.Exit(1)
 
         # Ensure directories exist
         settings.ensure_directories()
@@ -138,14 +130,13 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
             transactions_to_categorize.append(pair.outgoing)
             transactions_to_categorize.append(pair.incoming)
 
-        # Step 2: Categorize with LLM and create StandardTransactions
-        console.print("\n[cyan]Categorizing transactions with local LLM...[/cyan]")
-        categorizer = LLMCategorizer(_settings)
+        # Step 2: Categorize transactions with user selection
+        console.print("\n[cyan]Categorizing transactions...[/cyan]")
         currency_converter = CurrencyConverter()
 
         standardized: list[StandardTransaction] = []
 
-        # First, add confirmed transers (Skip LLM categorization)
+        # First, add confirmed transfers
         for pair in confirmed_transfers:
             for parsed in [pair.outgoing, pair.incoming]:
                 amount_dkk = currency_converter.convert(
@@ -162,42 +153,20 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
                         amount=amount_dkk,
                         source=parsed.source,
                         description=parsed.description,
-                        confidence=1.0,  # User confirmed
                     )
                 )
 
-        # Then categorize remaining transactions with LLM
-        for parsed in transactions_to_categorize:
-            # Categorize using description
-            categorized = categorizer.categorize(parsed.description)
-
-            # Convert currency to DKK
-            amount_dkk = currency_converter.convert(
-                amount=parsed.amount,
-                from_currency=parsed.currency,
-                to_currency="DKK",
-                transaction_date=parsed.date,
+        # Categorize remaining transactions via user selection
+        if transactions_to_categorize:
+            user_categorized = categorize_transactions(
+                _settings, transactions_to_categorize, currency_converter
             )
-
-            # Create standardized transaction
-            standardized.append(
-                StandardTransaction(
-                    date=parsed.date,
-                    category=categorized.category,
-                    subcategory=categorized.subcategory,
-                    amount=amount_dkk,
-                    source=parsed.source,
-                    description=parsed.description,
-                    confidence=categorized.confidence,
-                )
-            )
+            standardized.extend(user_categorized)
 
         console.print(
             f"[green]✓[/green] Categorized and normalized {len(standardized)} transactions"
         )
 
-        # Step 4: Confirm uncertain categories
-        standardized = confirm_uncertain_categories(_settings, standardized)
         if not standardized:
             console.print("[red]No transactions to export, exiting...[/red]")
             raise typer.Exit(1)
