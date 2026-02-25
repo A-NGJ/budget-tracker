@@ -106,26 +106,31 @@ def categorize_transactions(
         console.print(f"\n[bold]Transaction:[/bold] {parsed.description}")
         console.print(f"[dim]Amount: {amount_dkk} DKK | Date: {parsed.date}[/dim]")
 
-        # User selects category
-        new_category = select_option("\nSelect category", category_names)
-        if new_category is None:
-            console.print("  [red]Application error.[/red]")
-            raise KeyboardInterrupt
+        while True:
+            # User selects category
+            new_category = select_option("\nSelect category", category_names)
+            if new_category is None:
+                console.print("  [red]Application error.[/red]")
+                raise KeyboardInterrupt
 
-        # Subcategory selection
-        cat_index = category_names.index(new_category)
-        subcat_list = subcategories[cat_index]
-        new_subcategory = None
-        if subcat_list:
-            subcat_choices = [*subcat_list, "(Skip)"]
-            subcat_selection = select_option(
-                f"Select subcategory for {new_category}",
-                subcat_choices,
-                default="(Skip)",
-            )
-            new_subcategory = None if subcat_selection == "(Skip)" else subcat_selection
-        else:
-            console.print(f"  (No subcategories available for {new_category})")
+            # Subcategory selection
+            cat_index = category_names.index(new_category)
+            subcat_list = subcategories[cat_index]
+            new_subcategory = None
+            if subcat_list:
+                subcat_choices = [*subcat_list, "(Skip)"]
+                subcat_selection = select_option(
+                    f"Select subcategory for {new_category}",
+                    subcat_choices,
+                    default="(Skip)",
+                    allow_back=True,
+                )
+                if subcat_selection is None:
+                    continue
+                new_subcategory = None if subcat_selection == "(Skip)" else subcat_selection
+            else:
+                console.print(f"  (No subcategories available for {new_category})")
+            break
 
         # Cache and create transaction
         confirmed_cache[parsed.description] = (new_category, new_subcategory)
