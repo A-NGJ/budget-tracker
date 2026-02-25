@@ -4,38 +4,39 @@ This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
 
-This is a personal budget tracker written in Python.
+This project uses `uv` as the Python environment manager.
 
 ## Thoughts Directory
 
-This project uses a `.claude/thoughts/` directory for persistent context:
+This project uses a `.thoughts/` directory for persistent context:
 
 ```
-.claude/thoughts/
-├── shared/           # Shared across all worktrees/branches
-│   ├── plans/        # Implementation plans (created by /create-plan)
-│   ├── research/     # Codebase research notes
-│   └── decisions/    # Architecture decision records
-└── local/            # Branch-specific notes (gitignored)
-    └── scratch/      # Temporary working notes
+.thoughts/
+├── research/      # Codebase research notes
+├── plans/         # Implementation plans (created by /create-plan)
+├── designs/       # Design documents
+├── structures/    # Structure documents
+├── tickets/       # Ticket documentation
+├── prs/           # PR descriptions
+├── reviews/       # Code review reports
 ```
 
 ### Usage
 
-- **Plans**: Store implementation plans in `thoughts/shared/plans/`
-- **Research**: Document codebase findings in `thoughts/shared/research/`
-- **Decisions**: Record architectural decisions in `thoughts/shared/decisions/`
-- **Scratch**: Use `thoughts/local/scratch/` for temporary notes
+- **Research**: Document codebase findings in `.thoughts/research/`
+- **Plans**: Store implementation plans in `.thoughts/plans/`
+- **Designs**: Record architectural designs in `.thoughts/designs/`
+- **Tickets**: Keep ticket context in `.thoughts/tickets/`
 
 ### Conventions
 
-- Shared thoughts are committed to git
-- Local thoughts are gitignored for branch-specific work
-- Use descriptive filenames: `feature-name.md`, `2024-01-15-decision.md`
+- The `.thoughts/` directory is gitignored
+- Use descriptive filenames: `YYYY-MM-DD-feature-name.md`
+
+## Implementing Plans
+
+When implementing a plan from `.thoughts/plans/`, present intended changes for each phase before writing code. Pause between phases for manual verification. Update checkboxes in the plan file as items complete, and resume from the first unchecked item if checkboxes already exist.
 
 ## Development Conventions
 
-Code quality checks:
-- Type checking: `ty check`
-- Linting: `ruff check`
-- Formatting: `ruff format --check`
+All code must pass `ty` and `ruff` checks.
