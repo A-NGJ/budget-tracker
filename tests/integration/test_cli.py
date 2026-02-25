@@ -259,6 +259,37 @@ class TestEndToEnd:
         assert len(call_args) >= 1
 
 
+class TestClearCategories:
+    def test_clear_categories_no_file(self, cli_runner: CliRunner, settings: Settings) -> None:
+        """Test clear-categories when no mappings file exists."""
+        test_app = create_app(settings)
+        result = cli_runner.invoke(test_app, ["clear-categories"])
+        assert result.exit_code == 0
+        assert "No saved category mappings found" in result.output
+
+    def test_clear_categories_confirmed(self, cli_runner: CliRunner, settings: Settings) -> None:
+        """Test clear-categories with confirmation deletes the file."""
+        settings.category_mappings_file.write_text(
+            yaml.safe_dump({"Cafe Central": {"category": "Food & Drinks", "subcategory": None}})
+        )
+        test_app = create_app(settings)
+        result = cli_runner.invoke(test_app, ["clear-categories"], input="y\n")
+        assert result.exit_code == 0
+        assert "Category mappings cleared" in result.output
+        assert not settings.category_mappings_file.exists()
+
+    def test_clear_categories_cancelled(self, cli_runner: CliRunner, settings: Settings) -> None:
+        """Test clear-categories with denial preserves the file."""
+        settings.category_mappings_file.write_text(
+            yaml.safe_dump({"Cafe Central": {"category": "Food & Drinks", "subcategory": None}})
+        )
+        test_app = create_app(settings)
+        result = cli_runner.invoke(test_app, ["clear-categories"], input="n\n")
+        assert result.exit_code == 0
+        assert "Cancelled" in result.output
+        assert settings.category_mappings_file.exists()
+
+
 class TestCLIValidation:
     def test_process_nonexistent_file(self, cli_runner: CliRunner) -> None:
         """Test that processing a non-existent file shows an error"""

@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+import yaml
 from rich.console import Console
 
 from budget_tracker.cli.blacklist import interactive_blacklist_management
@@ -219,6 +220,29 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         """Interactively manage blacklist keywords for bank configurations"""
         settings: Settings = ctx.obj["settings"]
         interactive_blacklist_management(settings.banks_dir)
+
+    @app.command()
+    def clear_categories(ctx: typer.Context) -> None:
+        """Clear all saved category mappings, so transactions are re-prompted on next run."""
+        settings: Settings = ctx.obj["settings"]
+        mappings_file = settings.category_mappings_file
+
+        if not mappings_file.exists():
+            console.print("No saved category mappings found.")
+            return
+
+        count = 0
+        raw = yaml.safe_load(mappings_file.read_text())
+        if isinstance(raw, dict):
+            count = len(raw)
+
+        confirm = typer.confirm(f"Delete {count} saved category mapping(s)?")
+        if not confirm:
+            console.print("Cancelled.")
+            return
+
+        mappings_file.unlink()
+        console.print("[green]✓[/green] Category mappings cleared.")
 
     return app
 
