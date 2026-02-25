@@ -33,6 +33,7 @@ def settings(tmp_path: Path) -> Settings:
     settings.output_dir = tmp_path / "output"
     settings.banks_dir = tmp_path / "banks"
     settings.output_dir.mkdir(parents=True)
+    settings.category_mappings_file = tmp_path / "category_mappings.yaml"
     settings.banks_dir.mkdir(parents=True)
     return settings
 

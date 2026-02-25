@@ -1,3 +1,4 @@
+import yaml
 from rich.console import Console
 
 from budget_tracker.cli.selection import select_option
@@ -7,6 +8,56 @@ from budget_tracker.models.transaction import StandardTransaction
 from budget_tracker.parsers.csv_parser import ParsedTransaction
 
 console = Console()
+
+
+def _load_category_mappings(
+    settings: Settings,
+) -> dict[str, tuple[str, str | None]]:
+    """Load persisted category mappings from disk, validating against current categories."""
+    mappings_file = settings.category_mappings_file
+    if not mappings_file.exists():
+        return {}
+
+    raw = yaml.safe_load(mappings_file.read_text())
+    if not isinstance(raw, dict):
+        return {}
+
+    # Load valid categories for validation
+    categories = settings.load_categories()
+    valid_categories: dict[str, list[str]] = {}
+    for cat in categories["categories"]:
+        valid_categories[cat["name"]] = cat.get("subcategories", [])
+
+    result: dict[str, tuple[str, str | None]] = {}
+    for description, mapping in raw.items():
+        if not isinstance(mapping, dict):
+            continue
+        category = mapping.get("category")
+        subcategory = mapping.get("subcategory")
+        # Validate category exists
+        if category not in valid_categories:
+            continue
+        # Validate subcategory if present
+        if subcategory and subcategory not in valid_categories[category]:
+            continue
+        result[str(description)] = (category, subcategory)
+
+    return result
+
+
+def _save_category_mappings(
+    settings: Settings,
+    cache: dict[str, tuple[str, str | None]],
+) -> None:
+    """Persist category mappings to disk."""
+    mappings_file = settings.category_mappings_file
+    mappings_file.parent.mkdir(parents=True, exist_ok=True)
+
+    data: dict[str, dict[str, str | None]] = {}
+    for description, (category, subcategory) in cache.items():
+        data[description] = {"category": category, "subcategory": subcategory}
+
+    mappings_file.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
 
 
 def categorize_transactions(
@@ -22,8 +73,8 @@ def categorize_transactions(
     category_names = [c["name"] for c in categories["categories"]]
     subcategories = [c.get("subcategories", []) for c in categories["categories"]]
 
-    # Cache: {description: (category, subcategory)}
-    confirmed_cache: dict[str, tuple[str, str | None]] = {}
+    # Load persisted mappings
+    confirmed_cache = _load_category_mappings(settings)
     standardized: list[StandardTransaction] = []
 
     for parsed in transactions:
@@ -78,6 +129,7 @@ def categorize_transactions(
 
         # Cache and create transaction
         confirmed_cache[parsed.description] = (new_category, new_subcategory)
+        _save_category_mappings(settings, confirmed_cache)
         standardized.append(
             StandardTransaction(
                 date=parsed.date,

@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     google_credentials_dir: Path = Path.home() / ".budget-tracker"
     google_credentials_file: Path = Path.home() / ".budget-tracker" / "credentials.json"
     google_token_file: Path = Path.home() / ".budget-tracker" / "token.json"
+    category_mappings_file: Path = Path.home() / ".budget-tracker" / "category_mappings.yaml"
     google_sheets_retry_attempts: int = 3
     google_sheets_retry_base_delay: float = 1.0  # seconds
 

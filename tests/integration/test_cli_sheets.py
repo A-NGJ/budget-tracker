@@ -27,6 +27,7 @@ def settings(tmp_path: Path) -> Settings:
         google_credentials_dir=tmp_path / ".budget-tracker",
         google_credentials_file=tmp_path / ".budget-tracker" / "credentials.json",
         google_token_file=tmp_path / ".budget-tracker" / "token.json",
+        category_mappings_file=tmp_path / "category_mappings.yaml",
     )
 
 
