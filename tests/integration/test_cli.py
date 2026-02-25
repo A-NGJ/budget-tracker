@@ -123,7 +123,7 @@ class TestEndToEnd:
 
     @patch("budget_tracker.cli.main.confirm_transfers")
     @patch("budget_tracker.cli.main.categorize_transactions")
-    def test_full_processing_flow(
+    def test_full_processing_flow(  # noqa: PLR0913
         self,
         mock_categorize: MagicMock,
         mock_confirm_transfers: MagicMock,
@@ -147,7 +147,7 @@ class TestEndToEnd:
             StandardTransaction(
                 date=date(2025, 10, 11),
                 category="Transportation",
-                subcategory="Public Transit",
+                subcategory="Public Transport",
                 amount=Decimal("-24.00"),
                 source="bank1",
                 description="Metro Ticket",
@@ -186,7 +186,7 @@ class TestEndToEnd:
 
     @patch("budget_tracker.cli.main.confirm_transfers")
     @patch("budget_tracker.cli.main.categorize_transactions")
-    def test_process_with_transfers(
+    def test_process_with_transfers(  # noqa: PLR0913
         self,
         mock_categorize: MagicMock,
         mock_confirm_transfers: MagicMock,
@@ -213,7 +213,7 @@ class TestEndToEnd:
             StandardTransaction(
                 date=date(2025, 10, 11),
                 category="Transportation",
-                subcategory="Public Transit",
+                subcategory="Public Transport",
                 amount=Decimal("-24.00"),
                 source="bank1",
                 description="Metro Ticket",
