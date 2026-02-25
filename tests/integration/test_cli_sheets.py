@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from typer.testing import CliRunner
 
-from budget_tracker.categorizer.llm_categorizer import CategoryResult
 from budget_tracker.cli.main import create_app
 from budget_tracker.config.settings import Settings
+from budget_tracker.models.transaction import StandardTransaction
 from budget_tracker.parsers.csv_parser import ParsedTransaction
 
 
@@ -39,18 +39,16 @@ class TestSheetsFlag:
         assert "--sheets" in result.output
         assert "Export to Google Sheets" in result.output
 
-    @patch("budget_tracker.cli.main.is_ollama_running", return_value=True)
     @patch("budget_tracker.cli.main.GoogleSheetsExporter")
     @patch("budget_tracker.cli.main.CSVExporter")
-    @patch("budget_tracker.cli.main.LLMCategorizer")
+    @patch("budget_tracker.cli.main.categorize_transactions")
     @patch("budget_tracker.cli.main.CSVParser")
-    def test_sheets_flag_triggers_sheets_export(  # noqa: PLR0913
+    def test_sheets_flag_triggers_sheets_export(
         self,
         mock_parser: MagicMock,
-        mock_categorizer: MagicMock,
+        mock_categorize: MagicMock,
         mock_csv_exporter: MagicMock,
         mock_sheets_exporter: MagicMock,
-        mock_ollama: MagicMock,  # noqa: ARG002
         runner: CliRunner,
         settings: Settings,
         tmp_path: Path,
@@ -90,14 +88,17 @@ default_currency: DKK
         ]
         mock_parser.return_value = mock_parser_instance
 
-        mock_cat_instance = MagicMock()
-        mock_cat_instance.categorize.return_value = CategoryResult(
-            category="Other",
-            subcategory="Uncategorized",
-            confidence=1.0,
-            needs_confirmation=False,
-        )
-        mock_categorizer.return_value = mock_cat_instance
+        # Mock categorize_transactions to return pre-categorized transactions
+        mock_categorize.return_value = [
+            StandardTransaction(
+                date=date(2026, 1, 1),
+                category="Other",
+                subcategory="Uncategorized",
+                amount=Decimal("100"),
+                source="test_bank",
+                description="Test",
+            )
+        ]
 
         # Mock exporters
         mock_csv_instance = MagicMock()
@@ -113,12 +114,7 @@ default_currency: DKK
         mock_converter = MagicMock()
         mock_converter.convert.return_value = Decimal("100")
 
-        with (
-            patch("budget_tracker.cli.main.CurrencyConverter", return_value=mock_converter),
-            patch(
-                "budget_tracker.cli.main.confirm_uncertain_categories", side_effect=lambda _, t: t
-            ),
-        ):
+        with patch("budget_tracker.cli.main.CurrencyConverter", return_value=mock_converter):
             _ = runner.invoke(
                 app,
                 ["process", str(test_csv), "-b", "test_bank", "--sheets"],
@@ -128,18 +124,16 @@ default_currency: DKK
         mock_sheets_exporter.assert_called_once()
         mock_sheets_instance.export.assert_called_once()
 
-    @patch("budget_tracker.cli.main.is_ollama_running", return_value=True)
     @patch("budget_tracker.cli.main.GoogleSheetsExporter")
     @patch("budget_tracker.cli.main.CSVExporter")
-    @patch("budget_tracker.cli.main.LLMCategorizer")
+    @patch("budget_tracker.cli.main.categorize_transactions")
     @patch("budget_tracker.cli.main.CSVParser")
-    def test_without_sheets_flag_no_sheets_export(  # noqa: PLR0913
+    def test_without_sheets_flag_no_sheets_export(
         self,
         mock_parser: MagicMock,
-        mock_categorizer: MagicMock,
+        mock_categorize: MagicMock,
         mock_csv_exporter: MagicMock,
         mock_sheets_exporter: MagicMock,
-        mock_ollama: MagicMock,  # noqa: ARG002
         runner: CliRunner,
         settings: Settings,
         tmp_path: Path,
@@ -179,14 +173,17 @@ default_currency: DKK
         ]
         mock_parser.return_value = mock_parser_instance
 
-        mock_cat_instance = MagicMock()
-        mock_cat_instance.categorize.return_value = CategoryResult(
-            category="Other",
-            subcategory="Uncategorized",
-            confidence=1.0,
-            needs_confirmation=False,
-        )
-        mock_categorizer.return_value = mock_cat_instance
+        # Mock categorize_transactions to return pre-categorized transactions
+        mock_categorize.return_value = [
+            StandardTransaction(
+                date=date(2026, 1, 1),
+                category="Other",
+                subcategory="Uncategorized",
+                amount=Decimal("100"),
+                source="test_bank",
+                description="Test",
+            )
+        ]
 
         # Mock exporters
         mock_csv_instance = MagicMock()
@@ -198,12 +195,7 @@ default_currency: DKK
         mock_converter = MagicMock()
         mock_converter.convert.return_value = Decimal("100")
 
-        with (
-            patch("budget_tracker.cli.main.CurrencyConverter", return_value=mock_converter),
-            patch(
-                "budget_tracker.cli.main.confirm_uncertain_categories", side_effect=lambda _, t: t
-            ),
-        ):
+        with patch("budget_tracker.cli.main.CurrencyConverter", return_value=mock_converter):
             _ = runner.invoke(
                 app,
                 ["process", str(test_csv), "-b", "test_bank"],

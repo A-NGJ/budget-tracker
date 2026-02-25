@@ -2,9 +2,10 @@
 CLI integration tests for the budget tracker.
 
 These tests verify CLI argument parsing, component wiring, and data flow.
-External services (Ollama) are mocked for fast, reliable CI runs.
 """
 
+from datetime import date
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -13,9 +14,9 @@ import pytest
 import yaml
 from typer.testing import CliRunner
 
-from budget_tracker.categorizer.llm_categorizer import CategoryResult
 from budget_tracker.cli.main import app, create_app
 from budget_tracker.config.settings import Settings
+from budget_tracker.models.transaction import StandardTransaction
 
 
 @pytest.fixture
@@ -120,14 +121,12 @@ class TestEndToEnd:
         assert "bank1" in result.output
         assert "bank2" in result.output
 
-    @patch("budget_tracker.cli.main.is_ollama_running", return_value=True)
     @patch("budget_tracker.cli.main.confirm_transfers")
-    @patch("budget_tracker.cli.main.LLMCategorizer")
-    def test_full_processing_flow(  # noqa: PLR0913
+    @patch("budget_tracker.cli.main.categorize_transactions")
+    def test_full_processing_flow(
         self,
-        mock_categorizer_class: MagicMock,
+        mock_categorize: MagicMock,
         mock_confirm_transfers: MagicMock,
-        mock_ollama: MagicMock,  # noqa: ARG002
         cli_runner: CliRunner,
         settings: Settings,
         sample_csv: Path,
@@ -136,13 +135,32 @@ class TestEndToEnd:
         """Test complete flow from CSV to output."""
         # Setup mocks
         mock_confirm_transfers.return_value = ([], [])
-        mock_cat_instance = MagicMock()
-        mock_cat_instance.categorize.return_value = CategoryResult(
-            category="Food & Drinks",
-            subcategory="Restaurants",
-            confidence=0.95,
-        )
-        mock_categorizer_class.return_value = mock_cat_instance
+        mock_categorize.return_value = [
+            StandardTransaction(
+                date=date(2024, 1, 15),
+                category="Food & Drinks",
+                subcategory="Restaurants",
+                amount=Decimal("-100.00"),
+                source="bank1",
+                description="Cafe Central Copenhagen",
+            ),
+            StandardTransaction(
+                date=date(2025, 10, 11),
+                category="Transportation",
+                subcategory="Public Transit",
+                amount=Decimal("-24.00"),
+                source="bank1",
+                description="Metro Ticket",
+            ),
+            StandardTransaction(
+                date=date(2025, 10, 12),
+                category="Income",
+                subcategory="Salary",
+                amount=Decimal("5000.00"),
+                source="bank1",
+                description="Salary Payment",
+            ),
+        ]
 
         output_file = settings.output_dir / "output.csv"
         test_app = create_app(settings)
@@ -166,14 +184,12 @@ class TestEndToEnd:
         assert "Amount (DKK)" in df.columns
         assert "Source" in df.columns
 
-    @patch("budget_tracker.cli.main.is_ollama_running", return_value=True)
     @patch("budget_tracker.cli.main.confirm_transfers")
-    @patch("budget_tracker.cli.main.LLMCategorizer")
-    def test_process_with_transfers(  # noqa: PLR0913
+    @patch("budget_tracker.cli.main.categorize_transactions")
+    def test_process_with_transfers(
         self,
-        mock_categorizer_class: MagicMock,
+        mock_categorize: MagicMock,
         mock_confirm_transfers: MagicMock,
-        mock_ollama: MagicMock,  # noqa: ARG002
         cli_runner: CliRunner,
         settings: Settings,
         sample_csv: Path,
@@ -184,14 +200,41 @@ class TestEndToEnd:
         # 1. Setup mock_confirm_transfers to return empty (no confirmed transfers)
         mock_confirm_transfers.return_value = ([], [])
 
-        # 2. Setup mock categorizer
-        mock_cat_instance = MagicMock()
-        mock_cat_instance.categorize.return_value = CategoryResult(
-            category="Food & Drinks",
-            subcategory="Restaurants",
-            confidence=0.95,
-        )
-        mock_categorizer_class.return_value = mock_cat_instance
+        # 2. Setup mock categorize_transactions
+        mock_categorize.return_value = [
+            StandardTransaction(
+                date=date(2024, 1, 15),
+                category="Food & Drinks",
+                subcategory="Restaurants",
+                amount=Decimal("-100.00"),
+                source="bank1",
+                description="Cafe Central Copenhagen",
+            ),
+            StandardTransaction(
+                date=date(2025, 10, 11),
+                category="Transportation",
+                subcategory="Public Transit",
+                amount=Decimal("-24.00"),
+                source="bank1",
+                description="Metro Ticket",
+            ),
+            StandardTransaction(
+                date=date(2025, 10, 12),
+                category="Income",
+                subcategory="Salary",
+                amount=Decimal("5000.00"),
+                source="bank1",
+                description="Salary Payment",
+            ),
+            StandardTransaction(
+                date=date(2024, 1, 15),
+                category="Food & Drinks",
+                subcategory="Restaurants",
+                amount=Decimal("100.00"),
+                source="bank2",
+                description="Transfer from checking",
+            ),
+        ]
 
         # 3. Create second CSV file (incoming transfer from different bank)
         second_csv = settings.output_dir / "bank2.csv"
