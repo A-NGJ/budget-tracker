@@ -5,6 +5,8 @@ import typer
 import yaml
 from rich.console import Console
 
+from budget_tracker.analytics.engine import AnalyticsEngine
+from budget_tracker.analytics.models import AnalyticsPeriod
 from budget_tracker.cli.blacklist import interactive_blacklist_management
 from budget_tracker.cli.confirmation import categorize_transactions
 from budget_tracker.cli.mapping import interactive_column_mapping, load_mapping, save_mapping
@@ -12,7 +14,7 @@ from budget_tracker.cli.transfer_confirmation import confirm_transfers
 from budget_tracker.config.settings import Settings, get_settings
 from budget_tracker.currency.converter import CurrencyConverter
 from budget_tracker.exporters import CSVExporter, GoogleSheetsExporter
-from budget_tracker.exporters.summary import print_summary
+from budget_tracker.exporters.terminal_renderer import TerminalRenderer
 from budget_tracker.filters import TransferDetector
 from budget_tracker.models.transaction import StandardTransaction
 from budget_tracker.parsers.csv_parser import CSVParser, ParsedTransaction
@@ -192,8 +194,10 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
                 console.print(f"[red]✗[/red] Google Sheets export failed: {e}")
                 console.print("[yellow]CSV export completed successfully.[/yellow]")
 
-        # Print summary
-        print_summary(standardized)
+        # Display terminal analytics
+        period = AnalyticsPeriod(from_date=None, to_date=None, label="All Time")
+        analytics = AnalyticsEngine().compute(standardized, period)
+        TerminalRenderer(console).render(analytics)
 
     @app.command()
     def list_mappings(ctx: typer.Context) -> None:
