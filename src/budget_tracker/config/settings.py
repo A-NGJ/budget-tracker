@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     categories_file: Path = Path.cwd() / "config" / "categories.yaml"
     banks_dir: Path = Path.cwd() / "config" / "banks"
 
-    default_output_filename: str = "standardized_transactions.csv"
+    default_output_filename: str = "standardized_transactions.xlsx"
     default_date_format: str = "%d-%m-%Y"  # DD-MM-YYYY format
 
     # Google Sheets settings

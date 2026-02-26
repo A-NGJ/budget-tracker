@@ -13,7 +13,7 @@ from budget_tracker.cli.mapping import interactive_column_mapping, load_mapping,
 from budget_tracker.cli.transfer_confirmation import confirm_transfers
 from budget_tracker.config.settings import Settings, get_settings
 from budget_tracker.currency.converter import CurrencyConverter
-from budget_tracker.exporters import CSVExporter, GoogleSheetsExporter
+from budget_tracker.exporters import CSVExporter, ExcelExporter, GoogleSheetsExporter
 from budget_tracker.exporters.terminal_renderer import TerminalRenderer
 from budget_tracker.filters import TransferDetector
 from budget_tracker.models.transaction import StandardTransaction
@@ -43,7 +43,7 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         ctx.obj["settings"] = _settings
 
     @app.command()
-    def process(  # noqa: PLR0915, PLR0912
+    def process(  # noqa: PLR0915, PLR0912, PLR0913
         ctx: typer.Context,
         files: Annotated[list[Path], typer.Argument(help="CSV files to process")],
         banks: Annotated[
@@ -53,8 +53,9 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
             ),
         ],
         output: Annotated[
-            Path | None, typer.Option("--output", "-o", help="Output CSV file path")
+            Path | None, typer.Option("--output", "-o", help="Output file path")
         ] = None,
+        csv: Annotated[bool, typer.Option("--csv", help="Export as CSV instead of Excel.")] = False,
         sheets: Annotated[bool, typer.Option("--sheets", help="Export to Google Sheets.")] = False,
     ) -> None:
         """
@@ -174,12 +175,25 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
             console.print("[red]No transactions to export, exiting...[/red]")
             raise typer.Exit(1)
 
+        # Compute analytics (used by Excel exporter and terminal renderer)
+        period = AnalyticsPeriod(from_date=None, to_date=None, label="All Time")
+        analytics = AnalyticsEngine().compute(standardized, period)
+
         # Step 5: Export
         output_file = output or (settings.output_dir / settings.default_output_filename)
 
-        # Always export to CSV
-        csv_exporter = CSVExporter(_settings, output_file=output_file)
-        result_path = csv_exporter.export(standardized)
+        if csv:
+            if output_file.suffix == ".xlsx":
+                output_file = output_file.with_suffix(".csv")
+            file_exporter: CSVExporter | ExcelExporter = CSVExporter(
+                _settings, output_file=output_file
+            )
+        else:
+            file_exporter = ExcelExporter(
+                _settings, analytics_result=analytics, output_file=output_file
+            )
+
+        result_path = file_exporter.export(standardized)
         console.print("\n[bold green]✓ Success![/bold green]")
         console.print(f"Output written to: {result_path}")
 
@@ -192,11 +206,9 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
                 console.print(f"[green]✓[/green] {sheets_result}")
             except Exception as e:
                 console.print(f"[red]✗[/red] Google Sheets export failed: {e}")
-                console.print("[yellow]CSV export completed successfully.[/yellow]")
+                console.print("[yellow]File export completed successfully.[/yellow]")
 
         # Display terminal analytics
-        period = AnalyticsPeriod(from_date=None, to_date=None, label="All Time")
-        analytics = AnalyticsEngine().compute(standardized, period)
         TerminalRenderer(console).render(analytics)
 
     @app.command()
