@@ -64,6 +64,8 @@ def categorize_transactions(
     settings: Settings,
     transactions: list[ParsedTransaction],
     currency_converter: CurrencyConverter,
+    *,
+    no_cache: bool = False,
 ) -> list[StandardTransaction]:
     """
     Prompt user to categorize each transaction via interactive selection.
@@ -74,7 +76,8 @@ def categorize_transactions(
     subcategories = [c.get("subcategories", []) for c in categories["categories"]]
 
     # Load persisted mappings
-    confirmed_cache = _load_category_mappings(settings)
+    disk_mappings = _load_category_mappings(settings)
+    confirmed_cache: dict[str, tuple[str, str | None]] = {} if no_cache else dict(disk_mappings)
     standardized: list[StandardTransaction] = []
 
     for parsed in transactions:
@@ -134,7 +137,8 @@ def categorize_transactions(
 
         # Cache and create transaction
         confirmed_cache[parsed.description] = (new_category, new_subcategory)
-        _save_category_mappings(settings, confirmed_cache)
+        save_data = {**disk_mappings, **confirmed_cache} if no_cache else confirmed_cache
+        _save_category_mappings(settings, save_data)
         standardized.append(
             StandardTransaction(
                 date=parsed.date,

@@ -65,6 +65,13 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
             str | None,
             typer.Option("--to-date", help="End date for analytics period (YYYY-MM-DD)"),
         ] = None,
+        no_cache: Annotated[
+            bool,
+            typer.Option(
+                "--no-cache",
+                help="Skip cached category mappings; re-prompt all transactions.",
+            ),
+        ] = False,
     ) -> None:
         """
         Process bank statement CSV files and generate standardized output.
@@ -175,7 +182,7 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         # Categorize remaining transactions via user selection
         if transactions_to_categorize:
             user_categorized = categorize_transactions(
-                _settings, transactions_to_categorize, currency_converter
+                _settings, transactions_to_categorize, currency_converter, no_cache=no_cache
             )
             standardized.extend(user_categorized)
 

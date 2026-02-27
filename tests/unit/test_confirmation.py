@@ -41,6 +41,7 @@ def _make_settings(tmp_path: Path) -> Settings:
         output_dir=tmp_path / "output",
         banks_dir=tmp_path / "banks",
         categories_file=categories_file,
+        default_categories_file=categories_file,
         category_mappings_file=tmp_path / "category_mappings.yaml",
     )
 
@@ -185,6 +186,144 @@ class TestCategorizeTransactionsIntegration:
         assert result[0].category == "Food & Drinks"
         assert result[0].subcategory == "Restaurants"
         mock_select.assert_not_called()
+
+    @patch("budget_tracker.cli.confirmation.select_option")
+    def test_no_cache_skips_persisted_mappings(
+        self,
+        mock_select: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """With no_cache=True, cached mappings are ignored and user is prompted."""
+        settings = _make_settings(tmp_path)
+        settings.category_mappings_file.write_text(
+            yaml.safe_dump(
+                {
+                    "Cafe Central": {
+                        "category": "Food & Drinks",
+                        "subcategory": "Restaurants",
+                    },
+                }
+            )
+        )
+
+        mock_select.side_effect = ["Transportation", "Public Transport"]
+
+        converter = MagicMock()
+        converter.convert.return_value = Decimal("100")
+
+        transactions = [
+            ParsedTransaction(
+                date=date(2026, 1, 1),
+                amount=Decimal("100"),
+                currency="DKK",
+                description="Cafe Central",
+                source="bank1",
+                source_file="test.csv",
+            )
+        ]
+
+        result = categorize_transactions(settings, transactions, converter, no_cache=True)
+
+        assert len(result) == 1
+        assert result[0].category == "Transportation"
+        assert result[0].subcategory == "Public Transport"
+        assert mock_select.call_count == 2  # category + subcategory prompts
+
+    @patch("budget_tracker.cli.confirmation.select_option")
+    def test_no_cache_preserves_existing_and_overwrites_overlap(
+        self,
+        mock_select: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """With no_cache=True, new choices overwrite overlapping keys but preserve others."""
+        settings = _make_settings(tmp_path)
+        settings.category_mappings_file.write_text(
+            yaml.safe_dump(
+                {
+                    "Cafe Central": {
+                        "category": "Food & Drinks",
+                        "subcategory": "Restaurants",
+                    },
+                    "Metro Ticket": {
+                        "category": "Transportation",
+                        "subcategory": "Public Transport",
+                    },
+                }
+            )
+        )
+
+        # Re-categorize "Cafe Central" with a different choice
+        mock_select.side_effect = ["Transportation", "Public Transport"]
+
+        converter = MagicMock()
+        converter.convert.return_value = Decimal("100")
+
+        transactions = [
+            ParsedTransaction(
+                date=date(2026, 1, 1),
+                amount=Decimal("100"),
+                currency="DKK",
+                description="Cafe Central",
+                source="bank1",
+                source_file="test.csv",
+            )
+        ]
+
+        categorize_transactions(settings, transactions, converter, no_cache=True)
+
+        data = yaml.safe_load(settings.category_mappings_file.read_text())
+        # Overlapping key overwritten with new value
+        assert data["Cafe Central"] == {
+            "category": "Transportation",
+            "subcategory": "Public Transport",
+        }
+        # Non-overlapping key preserved
+        assert data["Metro Ticket"] == {
+            "category": "Transportation",
+            "subcategory": "Public Transport",
+        }
+
+    @patch("budget_tracker.cli.confirmation.select_option")
+    def test_no_cache_still_deduplicates_within_session(
+        self,
+        mock_select: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """With no_cache=True, duplicate descriptions in same session reuse the first choice."""
+        settings = _make_settings(tmp_path)
+
+        # Only one pair of prompts (category + subcategory) for the first occurrence
+        mock_select.side_effect = ["Food & Drinks", "Groceries"]
+
+        converter = MagicMock()
+        converter.convert.return_value = Decimal("50")
+
+        transactions = [
+            ParsedTransaction(
+                date=date(2026, 1, 1),
+                amount=Decimal("50"),
+                currency="DKK",
+                description="Supermarket",
+                source="bank1",
+                source_file="test.csv",
+            ),
+            ParsedTransaction(
+                date=date(2026, 1, 2),
+                amount=Decimal("30"),
+                currency="DKK",
+                description="Supermarket",
+                source="bank1",
+                source_file="test.csv",
+            ),
+        ]
+
+        result = categorize_transactions(settings, transactions, converter, no_cache=True)
+
+        assert len(result) == 2
+        assert result[0].category == "Food & Drinks"
+        assert result[1].category == "Food & Drinks"
+        # Only prompted once (2 select calls for category + subcategory)
+        assert mock_select.call_count == 2
 
     @patch("budget_tracker.cli.confirmation.select_option")
     def test_categorize_saves_new_mapping(
