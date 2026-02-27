@@ -224,7 +224,10 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         if sheets:
             console.print("\n[cyan]Exporting to Google Sheets...[/cyan]")
             try:
-                sheets_exporter = GoogleSheetsExporter(_settings)
+                sheet_name = output.stem if output else "Budget"
+                sheets_exporter = GoogleSheetsExporter(
+                    _settings, analytics_result=analytics, sheet_name=sheet_name
+                )
                 sheets_result = sheets_exporter.export(filtered)
                 console.print(f"[green]✓[/green] {sheets_result}")
             except Exception as e:

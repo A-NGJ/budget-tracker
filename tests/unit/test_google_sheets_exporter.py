@@ -3,8 +3,14 @@ from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import gspread.exceptions
 import pytest
 
+from budget_tracker.analytics.models import (
+    AnalyticsPeriod,
+    AnalyticsResult,
+    SummaryData,
+)
 from budget_tracker.config.settings import Settings
 from budget_tracker.exporters.google_sheets_exporter import SHEET_COLUMNS, GoogleSheetsExporter
 from budget_tracker.models.transaction import StandardTransaction
@@ -20,8 +26,29 @@ def settings(tmp_path: Path) -> Settings:
 
 
 @pytest.fixture
-def exporter(settings: Settings) -> GoogleSheetsExporter:
-    return GoogleSheetsExporter(settings)
+def minimal_analytics() -> AnalyticsResult:
+    period = AnalyticsPeriod(from_date=None, to_date=None, label="All Time")
+    return AnalyticsResult(
+        summary=SummaryData(
+            total_transactions=0,
+            total_income=Decimal("0"),
+            total_expenses=Decimal("0"),
+            net=Decimal("0"),
+            avg_transaction=Decimal("0"),
+            period=period,
+        ),
+        category_data=[],
+        monthly_data=[],
+        source_data=[],
+        period=period,
+    )
+
+
+@pytest.fixture
+def exporter(
+    settings: Settings, minimal_analytics: AnalyticsResult
+) -> GoogleSheetsExporter:
+    return GoogleSheetsExporter(settings, analytics_result=minimal_analytics)
 
 
 @pytest.fixture
@@ -36,35 +63,11 @@ def sample_transaction() -> StandardTransaction:
     )
 
 
-class TestGroupByYear:
-    def test_groups_transactions_by_year(self, exporter: GoogleSheetsExporter) -> None:
-        """Test that transactions are grouped by year"""
-        t2025 = StandardTransaction(
-            date=date(2025, 6, 10),
-            category="Shopping",
-            amount=Decimal("75.00"),
-            source="Bank",
-        )
-
-        t2026 = StandardTransaction(
-            date=date(2026, 3, 5),
-            category="Housing",
-            amount=Decimal("50.00"),
-            source="Bank",
-        )
-
-        result = exporter._group_by_year([t2025, t2026])
-        assert 2025 in result
-        assert 2026 in result
-        assert len(result[2025]) == 1
-        assert len(result[2026]) == 1
-
-
 class TestTransactionToRow:
     def test_converts_transaction_to_row(
         self, exporter: GoogleSheetsExporter, sample_transaction: StandardTransaction
     ) -> None:
-        """Test transaction to row converstion."""
+        """Test transaction to row conversion."""
         row = exporter._transaction_to_row(sample_transaction)
 
         assert row[0] == sample_transaction.transaction_id
@@ -93,18 +96,25 @@ class TestTransactionToRow:
 
 
 class TestSheetName:
-    def test_generates_sheet_name(self, exporter: GoogleSheetsExporter) -> None:
-        """Test sheet name generation."""
-        assert exporter._get_sheet_name(2026) == "Budget 2026"
+    def test_default_sheet_name(
+        self, settings: Settings, minimal_analytics: AnalyticsResult
+    ) -> None:
+        exporter = GoogleSheetsExporter(settings, analytics_result=minimal_analytics)
+        assert exporter.sheet_name == "Budget"
 
-    def test_custom_prefix(self, settings: Settings) -> None:
-        """Test custom sheet name prefix."""
-        exporter = GoogleSheetsExporter(settings, sheet_name_prefix="Expenses")
-        assert exporter._get_sheet_name(2026) == "Expenses 2026"
+    def test_custom_sheet_name(
+        self, settings: Settings, minimal_analytics: AnalyticsResult
+    ) -> None:
+        exporter = GoogleSheetsExporter(
+            settings, analytics_result=minimal_analytics, sheet_name="Q1 2025"
+        )
+        assert exporter.sheet_name == "Q1 2025"
 
 
 class TestExport:
-    def test_export_empty_list_returns_message(self, exporter: GoogleSheetsExporter) -> None:
+    def test_export_empty_list_returns_message(
+        self, exporter: GoogleSheetsExporter
+    ) -> None:
         """Test exporting empty list."""
         result = exporter.export([])
         assert result == "No transactions to export."
@@ -114,13 +124,18 @@ class TestExport:
         self,
         mock_client_class: MagicMock,
         settings: Settings,
+        minimal_analytics: AnalyticsResult,
         sample_transaction: StandardTransaction,
     ) -> None:
         """Test that existing transactions are filtered out."""
         mock_client = mock_client_class.return_value
+        mock_client._with_retry.side_effect = (
+            lambda _op, func, *args, **kwargs: func(*args, **kwargs)
+        )
         mock_worksheet = MagicMock()
         mock_spreadsheet = MagicMock()
         mock_spreadsheet.sheet1 = mock_worksheet
+        mock_spreadsheet.worksheet.side_effect = gspread.exceptions.WorksheetNotFound
 
         mock_client.open_or_create_spreadsheet.return_value = mock_spreadsheet
         # Return header + existing transaction ID
@@ -129,7 +144,9 @@ class TestExport:
             [sample_transaction.transaction_id, "2024-01-15", "Existing"],
         ]
 
-        exporter = GoogleSheetsExporter(settings)
+        exporter = GoogleSheetsExporter(
+            settings, analytics_result=minimal_analytics
+        )
         result = exporter.export([sample_transaction])
 
         # Should skip the duplicate
@@ -138,41 +155,34 @@ class TestExport:
         mock_client.append_rows.assert_not_called()
 
     @patch("budget_tracker.exporters.google_sheets_exporter.GoogleSheetsClient")
-    def test_export_retes_spreadsheet_per_year(
+    def test_export_uses_sheet_name(
         self,
         mock_client_class: MagicMock,
         settings: Settings,
+        minimal_analytics: AnalyticsResult,
     ) -> None:
-        """Test that separete spreadsheets are created per year"""
-        # Setup mocks
+        """Test that export uses self.sheet_name for the spreadsheet."""
         mock_client = mock_client_class.return_value
+        mock_client._with_retry.side_effect = (
+            lambda _op, func, *args, **kwargs: func(*args, **kwargs)
+        )
         mock_worksheet = MagicMock()
         mock_spreadsheet = MagicMock()
         mock_spreadsheet.sheet1 = mock_worksheet
+        mock_spreadsheet.worksheet.side_effect = gspread.exceptions.WorksheetNotFound
         mock_client.open_or_create_spreadsheet.return_value = mock_spreadsheet
-        mock_client.get_all_values.return_value = [SHEET_COLUMNS]  # Just header
+        mock_client.get_all_values.return_value = [SHEET_COLUMNS]
 
-        exporter = GoogleSheetsExporter(settings)
-        exporter._client = mock_client
-
-        transactions = [
+        exporter = GoogleSheetsExporter(
+            settings, analytics_result=minimal_analytics, sheet_name="My Budget"
+        )
+        exporter.export([
             StandardTransaction(
                 date=date(2024, 5, 10),
                 category="Housing",
                 amount=Decimal("200.00"),
                 source="Bank",
             ),
-            StandardTransaction(
-                date=date(2025, 7, 15),
-                category="Food & Drinks",
-                amount=Decimal("50.00"),
-                source="Bank",
-            ),
-        ]
+        ])
 
-        exporter.export(transactions)
-
-        # Should open/create two spreadsheets
-        assert mock_client.open_or_create_spreadsheet.call_count == 2
-        mock_client.open_or_create_spreadsheet.assert_any_call("Budget 2024")
-        mock_client.open_or_create_spreadsheet.assert_any_call("Budget 2025")
+        mock_client.open_or_create_spreadsheet.assert_called_once_with("My Budget")
