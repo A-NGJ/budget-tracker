@@ -6,10 +6,10 @@ import yaml
 from rich.console import Console
 
 from budget_tracker.analytics.engine import AnalyticsEngine
-from budget_tracker.analytics.models import AnalyticsPeriod
 from budget_tracker.cli.blacklist import interactive_blacklist_management
 from budget_tracker.cli.confirmation import categorize_transactions
 from budget_tracker.cli.mapping import interactive_column_mapping, load_mapping, save_mapping
+from budget_tracker.cli.period_selection import parse_period_flags, resolve_period
 from budget_tracker.cli.transfer_confirmation import confirm_transfers
 from budget_tracker.config.settings import Settings, get_settings
 from budget_tracker.currency.converter import CurrencyConverter
@@ -57,6 +57,14 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
         ] = None,
         csv: Annotated[bool, typer.Option("--csv", help="Export as CSV instead of Excel.")] = False,
         sheets: Annotated[bool, typer.Option("--sheets", help="Export to Google Sheets.")] = False,
+        from_date: Annotated[
+            str | None,
+            typer.Option("--from-date", help="Start date for analytics period (YYYY-MM-DD)"),
+        ] = None,
+        to_date: Annotated[
+            str | None,
+            typer.Option("--to-date", help="End date for analytics period (YYYY-MM-DD)"),
+        ] = None,
     ) -> None:
         """
         Process bank statement CSV files and generate standardized output.
@@ -81,6 +89,10 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
             console.print("Usage: budget-tracker process file1.csv file2.csv --banks bank1 bank2")
             console.print("Run 'budget-tracker list-mappings' to see available bank names.")
             raise typer.Exit(1)
+
+        # Validate date flags early (before any interactive work)
+        if from_date is not None or to_date is not None:
+            parse_period_flags(from_date, to_date)
 
         # Setup
         parser = CSVParser()
@@ -176,8 +188,19 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
             raise typer.Exit(1)
 
         # Compute analytics (used by Excel exporter and terminal renderer)
-        period = AnalyticsPeriod(from_date=None, to_date=None, label="All Time")
+        period = resolve_period(from_date, to_date, standardized, settings.no_interactive)
         analytics = AnalyticsEngine().compute(standardized, period)
+
+        # Filter transactions to the selected period for export
+        filtered = [
+            t for t in standardized
+            if (period.from_date is None or t.date >= period.from_date)
+            and (period.to_date is None or t.date <= period.to_date)
+        ]
+
+        if not filtered:
+            console.print("[red]No transactions in selected period, exiting...[/red]")
+            raise typer.Exit(1)
 
         # Step 5: Export
         output_file = output or (settings.output_dir / settings.default_output_filename)
@@ -193,7 +216,7 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
                 _settings, analytics_result=analytics, output_file=output_file
             )
 
-        result_path = file_exporter.export(standardized)
+        result_path = file_exporter.export(filtered)
         console.print("\n[bold green]✓ Success![/bold green]")
         console.print(f"Output written to: {result_path}")
 
@@ -202,7 +225,7 @@ def create_app(settings: Settings | None = None) -> typer.Typer:  # noqa: PLR091
             console.print("\n[cyan]Exporting to Google Sheets...[/cyan]")
             try:
                 sheets_exporter = GoogleSheetsExporter(_settings)
-                sheets_result = sheets_exporter.export(standardized)
+                sheets_result = sheets_exporter.export(filtered)
                 console.print(f"[green]✓[/green] {sheets_result}")
             except Exception as e:
                 console.print(f"[red]✗[/red] Google Sheets export failed: {e}")
