@@ -64,7 +64,7 @@ def sample_transactions() -> list[StandardTransaction]:
         ),
         StandardTransaction(
             date=date(2025, 11, 12),
-            category="Car",
+            category="Transportation",
             subcategory="Fuel",
             amount=Decimal("-350.00"),
             source="Danske Bank",
@@ -87,7 +87,7 @@ def sample_analytics() -> AnalyticsResult:
         ),
         category_data=[
             CategoryRow(
-                category="Car",
+                category="Transportation",
                 total=Decimal("-350.00"),
                 percentage=50.0,
                 transaction_count=1,
@@ -285,9 +285,9 @@ class TestCategorySheet:
 
     def test_sorted_by_amount_desc(self, exported_workbook: openpyxl.Workbook) -> None:
         ws = exported_workbook["Category Breakdown"]
-        # Car (-350) should come before Food & Drinks (-325.50)
+        # Transportation (-350) should come before Food & Drinks (-325.50)
         # sorted by most negative = largest expense first
-        assert ws.cell(2, 1).value == "Car"
+        assert ws.cell(2, 1).value == "Transportation"
         assert ws.cell(3, 1).value == "Food & Drinks"
 
     def test_category_data(self, exported_workbook: openpyxl.Workbook) -> None:

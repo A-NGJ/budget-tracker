@@ -1,5 +1,6 @@
 """Application settings and configuration management."""
 
+import shutil
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -17,7 +18,8 @@ class Settings(BaseSettings):
     data_dir: Path = Path.cwd() / "data"
     output_dir: Path = Path.cwd() / "data" / "output"
 
-    categories_file: Path = Path.cwd() / "config" / "categories.yaml"
+    categories_file: Path = Path.home() / ".budget-tracker" / "categories.yaml"
+    default_categories_file: Path = Path.cwd() / "config" / "categories.yaml"
     banks_dir: Path = Path.cwd() / "config" / "banks"
 
     default_output_filename: str = "standardized_transactions.xlsx"
@@ -35,7 +37,10 @@ class Settings(BaseSettings):
     no_interactive: bool = False  # If True, disable interactive prompts
 
     def load_categories(self) -> dict[str, Any]:
-        """Load categories from YAML file."""
+        """Load categories from user's YAML file, seeding from default if needed."""
+        if not self.categories_file.exists() and self.default_categories_file.exists():
+            self.categories_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(self.default_categories_file, self.categories_file)
         with self.categories_file.open() as f:
             return yaml.safe_load(f)  # type: ignore[no-any-return]
 

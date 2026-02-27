@@ -168,7 +168,10 @@ class TestEndToEnd:
 
         result = cli_runner.invoke(
             test_app,
-            ["process", str(sample_csv), "-b", "bank1", "--csv", "--output", str(output_file)],
+            [
+                "process", str(sample_csv), "-b", "bank1", "--csv", "--output", str(output_file),
+                "--from-date", "2024-01-01", "--to-date", "2026-12-31",
+            ],
         )
 
         # Verify successful execution

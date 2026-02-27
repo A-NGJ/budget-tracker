@@ -118,7 +118,10 @@ default_currency: DKK
         with patch("budget_tracker.cli.main.CurrencyConverter", return_value=mock_converter):
             _ = runner.invoke(
                 app,
-                ["process", str(test_csv), "-b", "test_bank", "--sheets"],
+                [
+                    "process", str(test_csv), "-b", "test_bank", "--sheets",
+                    "--from-date", "2026-01-01", "--to-date", "2026-12-31",
+                ],
             )
 
         # Verify Google Sheets exporter was called

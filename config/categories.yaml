@@ -4,6 +4,29 @@ categories:
       - "Groceries"
       - "Restaurants"
       - "Coffee & Cafes"
+      - "Delivery"
+      - "Other"
+
+  - name: "Housing"
+    subcategories:
+      - "Rent"
+      - "Electricity"
+      - "Heating"
+      - "Water"
+      - "Internet"
+      - "Other"
+
+  - name: "Transportation"
+    subcategories:
+      - "Public Transport"
+      - "Fuel"
+      - "Car Maintenance"
+      - "Car Insurance"
+      - "Parking"
+      - "Taxi & Rideshare"
+      - "Bicycle"
+      - "Road fees & Tolls"
+      - "Ferry"
       - "Other"
 
   - name: "Shopping"
@@ -12,64 +35,43 @@ categories:
       - "Electronics"
       - "Home Goods"
       - "Personal Care"
-      - "Sport"
-      - "Other hobbies"
       - "Tools"
       - "Other"
 
-  - name: "Housing"
+  - name: "Entertainment"
     subcategories:
-      - "Rent"
-      - "Internet"
-      - "Electricity"
-      - "Heating"
-      - "Water"
-      - "Other"
-
-  - name: "Transportation"
-    subcategories:
-      - "Public Transport"
-      - "Taxi & Rideshare"
-      - "Bicycle"
-      - "Other"
-
-  - name: "Car"
-    subcategories:
-      - "Fuel"
-      - "Maintenance"
-      - "Insurance"
-      - "Parking"
-      - "Other"
-
-  - name: "Life & Entertainment"
-    subcategories:
-      - "Streaming Services"
       - "Events & Activities"
-      - "Hobbies"
-      - "Holiday, Trips, Hotels"
-      - "Flights"
-      - "Active Sport"
-      - "Culture & Sport Events"
+      - "Hobbies & Sports"
+      - "Culture"
       - "Other"
 
-  - name: "Healthcare"
+  - name: "Travel"
+    subcategories:
+      - "Flights"
+      - "Hotels & Accommodation"
+      - "Other"
+
+  - name: "Health"
     subcategories:
       - "Medicine"
       - "Doctor & Dentist"
       - "Health Insurance"
+      - "Gym & Fitness"
       - "Other"
 
-  - name: "Communication & PC"
+  - name: "Subscriptions & Digital"
     subcategories:
-      - "Mobile"
-      - "Software, Apps, Games"
+      - "Streaming Services"
+      - "Phone"
+      - "Software & Apps"
       - "Other"
 
-  - name: "Financial expenses"
+  - name: "Financial"
     subcategories:
       - "Bank Fees"
       - "Insurance"
       - "Loans & Credits"
+      - "Taxes"
       - "Other"
 
   - name: "Investments"
@@ -85,7 +87,7 @@ categories:
 
   - name: "Other"
     subcategories:
-        - "Uncategorized"
+      - "Uncategorized"
 
   - name: "Internal Transfer"
     subcategories:

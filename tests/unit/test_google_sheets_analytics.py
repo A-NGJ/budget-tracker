@@ -35,7 +35,7 @@ def sample_analytics() -> AnalyticsResult:
         ),
         category_data=[
             CategoryRow(
-                category="Car",
+                category="Transportation",
                 total=Decimal("-350.00"),
                 percentage=50.0,
                 transaction_count=1,
@@ -237,8 +237,8 @@ class TestWriteCategorySheet:
     ) -> None:
         _make_exporter(sample_analytics)._write_category_sheet(mock_spreadsheet)
         data = mock_worksheet.update.call_args[0][0]
-        # Car (first category)
-        assert data[1][0] == "Car"
+        # Transportation (first category)
+        assert data[1][0] == "Transportation"
         assert data[1][1] == pytest.approx(-350.00)
         assert data[1][2] == pytest.approx(0.5)  # 50% as decimal
         assert data[1][3] == 1

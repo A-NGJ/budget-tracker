@@ -4,7 +4,6 @@ import hashlib
 from datetime import date
 from decimal import Decimal
 
-import yaml
 from pydantic import BaseModel, ConfigDict, ValidationInfo, field_validator
 
 from budget_tracker.config.settings import get_settings
@@ -26,21 +25,16 @@ class StandardTransaction(BaseModel):
     @classmethod
     def validate_category(cls, v: str) -> str:
         """Validate that category exists in categories.yaml."""
-        settings = get_settings()
-
         if not v or not v.strip():
             msg = "Category cannot be empty"
             raise ValueError(msg)
 
-        if settings.categories_file.exists():
-            data = yaml.safe_load(settings.categories_file.read_text())
-            category_names = [cat["name"] for cat in data["categories"]]
-            if v not in category_names:
-                msg = f"Category '{v}' not found in categories.yaml"
-                raise ValueError(msg)
-        else:
-            msg = f"Categories file not found: {settings.categories_file}"
-            raise FileNotFoundError(msg)
+        settings = get_settings()
+        data = settings.load_categories()
+        category_names = [cat["name"] for cat in data["categories"]]
+        if v not in category_names:
+            msg = f"Category '{v}' not found in categories.yaml"
+            raise ValueError(msg)
 
         return v
 
@@ -48,8 +42,6 @@ class StandardTransaction(BaseModel):
     @classmethod
     def validate_subcategory(cls, v: str | None, info: ValidationInfo) -> str | None:
         """Validate that subcategory exists in categories.yaml under the given category."""
-        settings = get_settings()
-
         if v is None or not v.strip():
             return v
 
@@ -58,20 +50,17 @@ class StandardTransaction(BaseModel):
             msg = "Category must be set before validating subcategory"
             raise ValueError(msg)
 
-        if settings.categories_file.exists():
-            data = yaml.safe_load(settings.categories_file.read_text())
-            for cat in data["categories"]:
-                if cat["name"] == category:
-                    subcategory_names = cat.get("subcategories", [])
-                    if v not in subcategory_names:
-                        msg = f"Subcategory '{v}' not found under category '{category}' in categories.yaml"  # noqa: E501
-                        raise ValueError(msg)
-                    return v
-            msg = f"Category '{category}' not found in categories.yaml"
-            raise ValueError(msg)
-        else:
-            msg = f"Categories file not found: {settings.categories_file}"
-            raise FileNotFoundError(msg)
+        settings = get_settings()
+        data = settings.load_categories()
+        for cat in data["categories"]:
+            if cat["name"] == category:
+                subcategory_names = cat.get("subcategories", [])
+                if v not in subcategory_names:
+                    msg = f"Subcategory '{v}' not found under category '{category}' in categories.yaml"  # noqa: E501
+                    raise ValueError(msg)
+                return v
+        msg = f"Category '{category}' not found in categories.yaml"
+        raise ValueError(msg)
 
     @property
     def transaction_id(self) -> str:
