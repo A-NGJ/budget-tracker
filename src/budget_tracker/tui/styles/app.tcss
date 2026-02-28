@@ -1,0 +1,43 @@
+/* Semantic color tokens */
+$income: ansi_green;
+$expense: ansi_red;
+$neutral: ansi_default;
+$cached: ansi_bright_black;
+$active: ansi_cyan;
+
+/* Transaction status indicators */
+.status-done { color: ansi_green; }
+.status-current { color: ansi_cyan; }
+.status-pending { color: ansi_bright_black; }
+.status-cached { color: ansi_yellow; }
+
+/* Amount color coding */
+.amount-positive { color: ansi_green; }
+.amount-negative { color: ansi_red; }
+
+/* HomeScreen styles */
+HomeScreen {
+    align: center middle;
+}
+
+HomeScreen #title {
+    text-align: center;
+    text-style: bold;
+    margin-bottom: 1;
+    width: 100%;
+}
+
+HomeScreen .menu-item {
+    height: 1;
+    margin-left: 2;
+}
+
+/* Placeholder screen styles */
+PlaceholderScreen {
+    align: center middle;
+}
+
+PlaceholderScreen #placeholder-text {
+    text-align: center;
+    text-style: italic;
+}
