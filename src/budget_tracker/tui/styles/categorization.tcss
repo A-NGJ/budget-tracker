@@ -1,0 +1,32 @@
+/* CategorizationScreen layout */
+
+CategorizationScreen #top-panels {
+    height: 1fr;
+}
+
+CategorizationScreen TransactionTable {
+    width: 1fr;
+    border: round $primary;
+}
+
+CategorizationScreen CategoryList {
+    width: 1fr;
+    border: round $primary;
+}
+
+CategorizationScreen TransactionDetail {
+    height: auto;
+    min-height: 3;
+    max-height: 5;
+    border: round $primary;
+}
+
+CategorizationScreen #search-input {
+    display: none;
+    height: 3;
+}
+
+CategorizationScreen #status-bar {
+    height: 1;
+    text-align: center;
+}

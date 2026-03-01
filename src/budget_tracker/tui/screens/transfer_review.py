@@ -196,7 +196,7 @@ class TransferReviewScreen(Screen):
             rejected_txns.append(pair.incoming)
         state.transactions_to_categorize = list(self._remaining) + rejected_txns
 
-        self.app.push_screen("placeholder")
+        self.app.push_screen("categorization")
 
     def action_go_back(self) -> None:
         if self._confirmed or self._rejected:

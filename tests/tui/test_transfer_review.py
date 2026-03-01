@@ -64,6 +64,9 @@ def mock_service() -> MagicMock:
     service = MagicMock(spec=BudgetService)
     service.list_mappings.return_value = []
     service.detect_transfers.return_value = ([PAIR_1, PAIR_2], [NON_TRANSFER])
+    # CategorizationScreen dependencies (loaded after transfer review finishes)
+    service.load_categories.return_value = {}
+    service.get_cached_category.return_value = None
     return service
 
 
@@ -133,25 +136,27 @@ class TestTransferReviewScreen:
             assert "Pair 2 of 2" in str(counter._Static__content)  # type: ignore[attr-defined]
 
     async def test_accept_all_advances_screen(self, app: BudgetTrackerApp) -> None:
-        """Pressing A accepts all remaining pairs and advances to next screen."""
+        """Pressing A accepts all remaining pairs and advances to categorization."""
         async with app.run_test() as pilot:
             await _push_transfer_review(app, pilot)
 
             await pilot.press("a")
             await pilot.pause()
+            await pilot.pause()
 
-            # Should have advanced past TransferReviewScreen
-            assert app.screen.__class__.__name__ == "PlaceholderScreen"
+            # Should have advanced to CategorizationScreen
+            assert app.screen.__class__.__name__ == "CategorizationScreen"
 
     async def test_skip_all_advances_screen(self, app: BudgetTrackerApp) -> None:
-        """Pressing S skips all remaining pairs and advances to next screen."""
+        """Pressing S skips all remaining pairs and advances to categorization."""
         async with app.run_test() as pilot:
             await _push_transfer_review(app, pilot)
 
             await pilot.press("s")
             await pilot.pause()
+            await pilot.pause()
 
-            assert app.screen.__class__.__name__ == "PlaceholderScreen"
+            assert app.screen.__class__.__name__ == "CategorizationScreen"
 
     async def test_state_populated_after_confirm_and_reject(self, app: BudgetTrackerApp) -> None:
         """Pipeline state is correctly populated after confirming and rejecting."""
@@ -213,15 +218,18 @@ class TestTransferReviewNoTransfers:
         service = MagicMock(spec=BudgetService)
         service.list_mappings.return_value = []
         service.detect_transfers.return_value = ([], [NON_TRANSFER])
+        service.load_categories.return_value = {}
+        service.get_cached_category.return_value = None
         app = BudgetTrackerApp(service=service)
 
         async with app.run_test() as pilot:
             app.push_screen("transfer_review")
             await pilot.pause()
             await pilot.pause()
+            await pilot.pause()
 
-            # Should have auto-advanced past TransferReviewScreen
-            assert app.screen.__class__.__name__ == "PlaceholderScreen"
+            # Should have auto-advanced to CategorizationScreen
+            assert app.screen.__class__.__name__ == "CategorizationScreen"
 
             # State should have all transactions in categorize pool
             state = app.pipeline_state
