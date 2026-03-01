@@ -46,6 +46,7 @@ def mock_service() -> MagicMock:
     ]
     mock_df = pd.DataFrame({"Dato": ["15-01-2024"], "Beløb": ["-100,00"], "Tekst": ["Test"]})
     service.detect_columns.return_value = (mock_df, ["Dato", "Beløb", "Tekst"])
+    service.detect_transfers.return_value = ([], [])
     return service
 
 

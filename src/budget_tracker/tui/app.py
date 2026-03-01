@@ -11,6 +11,7 @@ from budget_tracker.services.budget_service import BudgetService
 from budget_tracker.tui.screens.file_selection import FileSelectionScreen
 from budget_tracker.tui.screens.home import HomeScreen
 from budget_tracker.tui.screens.placeholder import PlaceholderScreen
+from budget_tracker.tui.screens.transfer_review import TransferReviewScreen
 from budget_tracker.tui.state import PipelineState
 
 
@@ -24,6 +25,7 @@ class BudgetTrackerApp(App[None]):
         "home": HomeScreen,
         "placeholder": PlaceholderScreen,
         "file_selection": FileSelectionScreen,
+        "transfer_review": TransferReviewScreen,
     }
 
     def __init__(self, service: BudgetService | None = None) -> None:

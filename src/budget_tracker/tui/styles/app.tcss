@@ -84,6 +84,41 @@ FileSelectionScreen #continue-hint {
     text-align: center;
 }
 
+/* TransferReviewScreen styles */
+TransferReviewScreen #title {
+    text-align: center;
+    text-style: bold;
+    margin-bottom: 1;
+    width: 100%;
+}
+
+TransferReviewScreen #pair-counter {
+    margin: 0 2;
+    text-style: bold;
+}
+
+TransferReviewScreen #pair-card {
+    margin: 0 2;
+    height: auto;
+    border: round $primary;
+    padding: 1 2;
+}
+
+TransferReviewScreen #prompt {
+    margin: 1 2 0 2;
+    text-style: bold;
+}
+
+TransferReviewScreen #action-bar {
+    margin: 0 2;
+    height: 1;
+}
+
+TransferReviewScreen #loading {
+    height: 1;
+    margin: 0 2;
+}
+
 /* Placeholder screen styles */
 PlaceholderScreen {
     align: center middle;
