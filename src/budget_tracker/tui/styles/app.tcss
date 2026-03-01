@@ -73,6 +73,17 @@ FileSelectionScreen #bank-select {
     width: 1fr;
 }
 
+FileSelectionScreen #loading {
+    height: 1;
+    margin: 0 2;
+}
+
+FileSelectionScreen #continue-hint {
+    height: 1;
+    margin: 1 2 0 2;
+    text-align: center;
+}
+
 /* Placeholder screen styles */
 PlaceholderScreen {
     align: center middle;

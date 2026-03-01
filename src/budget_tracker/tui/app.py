@@ -6,6 +6,8 @@ from typing import ClassVar
 
 from textual.app import App
 
+from budget_tracker.config.settings import get_settings
+from budget_tracker.services.budget_service import BudgetService
 from budget_tracker.tui.screens.file_selection import FileSelectionScreen
 from budget_tracker.tui.screens.home import HomeScreen
 from budget_tracker.tui.screens.placeholder import PlaceholderScreen
@@ -24,9 +26,16 @@ class BudgetTrackerApp(App[None]):
         "file_selection": FileSelectionScreen,
     }
 
-    def __init__(self) -> None:
+    def __init__(self, service: BudgetService | None = None) -> None:
         super().__init__()
+        self._service = service
         self.pipeline_state = PipelineState()
+
+    @property
+    def service(self) -> BudgetService:
+        if self._service is None:
+            self._service = BudgetService(get_settings())
+        return self._service
 
     def on_mount(self) -> None:
         self.push_screen("home")
