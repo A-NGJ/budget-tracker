@@ -32,6 +32,47 @@ HomeScreen .menu-item {
     margin-left: 2;
 }
 
+/* FileSelectionScreen styles */
+FileSelectionScreen #title {
+    text-align: center;
+    text-style: bold;
+    margin-bottom: 1;
+    width: 100%;
+}
+
+FileSelectionScreen #file-list-label {
+    margin: 1 0 0 2;
+    text-style: bold;
+}
+
+FileSelectionScreen #file-list {
+    height: auto;
+    max-height: 12;
+    margin: 0 2;
+}
+
+FileSelectionScreen .file-entry {
+    height: 1;
+}
+
+FileSelectionScreen #input-row {
+    margin: 1 2 0 2;
+    height: 3;
+}
+
+FileSelectionScreen #file-input {
+    width: 1fr;
+}
+
+FileSelectionScreen #bank-row {
+    margin: 0 2;
+    height: 3;
+}
+
+FileSelectionScreen #bank-select {
+    width: 1fr;
+}
+
 /* Placeholder screen styles */
 PlaceholderScreen {
     align: center middle;

@@ -26,11 +26,11 @@ class TestHomeScreen:
         async with app.run_test() as pilot:
             await pilot.press("q")
 
-    async def test_process_key_pushes_placeholder(self, app: BudgetTrackerApp) -> None:
-        """Pressing P navigates to placeholder screen."""
+    async def test_process_key_pushes_file_selection(self, app: BudgetTrackerApp) -> None:
+        """Pressing P navigates to file selection screen."""
         async with app.run_test() as pilot:
             await pilot.press("p")
-            assert app.screen.__class__.__name__ == "PlaceholderScreen"
+            assert app.screen.__class__.__name__ == "FileSelectionScreen"
 
     async def test_blacklist_key_pushes_placeholder(self, app: BudgetTrackerApp) -> None:
         """Pressing B navigates to placeholder screen."""
@@ -50,11 +50,11 @@ class TestHomeScreen:
             await pilot.press("c")
             assert app.screen.__class__.__name__ == "PlaceholderScreen"
 
-    async def test_escape_from_placeholder_returns_home(self, app: BudgetTrackerApp) -> None:
-        """Pressing Escape on placeholder screen returns to home."""
+    async def test_escape_from_file_selection_returns_home(self, app: BudgetTrackerApp) -> None:
+        """Pressing Escape on file selection screen returns to home."""
         async with app.run_test() as pilot:
             await pilot.press("p")
-            assert app.screen.__class__.__name__ == "PlaceholderScreen"
+            assert app.screen.__class__.__name__ == "FileSelectionScreen"
             await pilot.press("escape")
             assert app.screen.__class__.__name__ == "HomeScreen"
 

@@ -6,6 +6,7 @@ from typing import ClassVar
 
 from textual.app import App
 
+from budget_tracker.tui.screens.file_selection import FileSelectionScreen
 from budget_tracker.tui.screens.home import HomeScreen
 from budget_tracker.tui.screens.placeholder import PlaceholderScreen
 from budget_tracker.tui.state import PipelineState
@@ -20,6 +21,7 @@ class BudgetTrackerApp(App[None]):
     SCREENS: ClassVar[dict[str, type]] = {
         "home": HomeScreen,
         "placeholder": PlaceholderScreen,
+        "file_selection": FileSelectionScreen,
     }
 
     def __init__(self) -> None:

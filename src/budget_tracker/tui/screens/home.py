@@ -54,7 +54,7 @@ class HomeScreen(Screen):
         yield Footer()
 
     def action_process(self) -> None:
-        self.app.push_screen("placeholder")
+        self.app.push_screen("file_selection")
 
     def action_blacklists(self) -> None:
         self.app.push_screen("placeholder")
