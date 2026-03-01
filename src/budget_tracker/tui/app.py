@@ -9,8 +9,10 @@ from textual.app import App
 from budget_tracker.config.settings import get_settings
 from budget_tracker.services.budget_service import BudgetService
 from budget_tracker.tui.screens.categorization import CategorizationScreen
+from budget_tracker.tui.screens.export import ExportScreen
 from budget_tracker.tui.screens.file_selection import FileSelectionScreen
 from budget_tracker.tui.screens.home import HomeScreen
+from budget_tracker.tui.screens.period_selection import PeriodSelectionScreen
 from budget_tracker.tui.screens.placeholder import PlaceholderScreen
 from budget_tracker.tui.screens.transfer_review import TransferReviewScreen
 from budget_tracker.tui.state import PipelineState
@@ -27,7 +29,9 @@ class BudgetTrackerApp(App[None]):
         "placeholder": PlaceholderScreen,
         "file_selection": FileSelectionScreen,
         "transfer_review": TransferReviewScreen,
+        "period_selection": PeriodSelectionScreen,
         "categorization": CategorizationScreen,
+        "export": ExportScreen,
     }
 
     def __init__(self, service: BudgetService | None = None) -> None:
