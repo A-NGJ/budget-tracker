@@ -48,6 +48,8 @@ class CategoryList(Widget):
         opt_list.clear_options()
         for cat in self._category_names:
             opt_list.add_option(cat)
+        if self._category_names:
+            opt_list.highlighted = 0
 
     def _show_subcategories(self, category: str) -> None:
         self._current_category = category
@@ -57,6 +59,7 @@ class CategoryList(Widget):
         opt_list.add_option("← Back")
         for subcat in self._subcategory_names:
             opt_list.add_option(subcat)
+        opt_list.highlighted = 0
 
     def is_in_subcategory_mode(self) -> bool:
         """Return True if currently showing subcategories."""
