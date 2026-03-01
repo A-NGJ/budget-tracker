@@ -11,11 +11,15 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Footer, Input, Select, Static
 
+from budget_tracker.parsers.csv_parser import CSVParser
+from budget_tracker.tui.screens.column_mapping import ColumnMappingScreen
 from budget_tracker.tui.widgets.help_overlay import HelpOverlay
 
 if TYPE_CHECKING:
     from textual.app import ComposeResult
     from textual.binding import BindingType
+
+    from budget_tracker.models.bank_mapping import BankMapping
 
 
 HELP_TEXT = """\
@@ -56,6 +60,8 @@ class FileSelectionScreen(Screen):
     def __init__(self) -> None:
         super().__init__()
         self._files: list[FileEntry] = []
+        self._bank_options: list[tuple[str, str]] = [("New mapping...", "__new__")]
+        self._mappings: dict[str, BankMapping] = {}
 
     def compose(self) -> ComposeResult:
         yield Static("Process Bank Statements", id="title")
@@ -65,7 +71,7 @@ class FileSelectionScreen(Screen):
             yield Input(placeholder="Path to CSV file...", id="file-input")
         with Horizontal(id="bank-row"):
             yield Select(
-                [("New mapping...", "__new__")],
+                self._bank_options,
                 id="bank-select",
                 prompt="Select bank...",
                 allow_blank=True,
@@ -94,7 +100,19 @@ class FileSelectionScreen(Screen):
             return
 
         if bank_value == "__new__":
-            self.notify("New mapping wizard not yet implemented.", severity="information")
+            path = Path(path_str)
+            if not path.exists():
+                self.notify(f"File not found: {path}", severity="error")
+                return
+            try:
+                df, columns = CSVParser().parse_file(path)
+            except Exception as e:
+                self.notify(f"Failed to read file: {e}", severity="error")
+                return
+            self.app.push_screen(
+                ColumnMappingScreen(columns, df),
+                callback=self._on_mapping_created,
+            )
             return
 
         entry = FileEntry(path=Path(path_str), bank_name=str(bank_value))
@@ -103,6 +121,16 @@ class FileSelectionScreen(Screen):
 
         file_input.value = ""
         bank_select.clear()
+
+    def _on_mapping_created(self, mapping: BankMapping | None) -> None:
+        """Handle result from ColumnMappingScreen."""
+        if mapping is None:
+            return
+        self._mappings[mapping.bank_name] = mapping
+        self._bank_options.insert(-1, (mapping.bank_name, mapping.bank_name))
+        bank_select = self.query_one("#bank-select", Select)
+        bank_select.set_options(self._bank_options)
+        bank_select.value = mapping.bank_name
 
     def action_remove_file(self) -> None:
         if not self._files:
