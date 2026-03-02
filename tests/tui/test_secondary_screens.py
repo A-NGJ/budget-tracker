@@ -177,3 +177,102 @@ class TestBlacklistScreen:
             await pilot.pause()
 
             service.add_blacklist_keyword.assert_called_once_with("danske_bank", "ENTER_KEYWORD")
+
+
+async def _push_mappings(app: BudgetTrackerApp, pilot: object) -> None:
+    """Navigate from home to mappings screen."""
+    app.push_screen("mappings")
+    await pilot.pause()  # type: ignore[attr-defined]
+
+
+# ── MappingsScreen Tests ─────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+class TestMappingsScreen:
+    """Tests for the read-only mappings viewer."""
+
+    async def test_mappings_screen_renders(self) -> None:
+        """MappingsScreen shows title and bank selector."""
+        app = BudgetTrackerApp(service=_make_service())
+        async with app.run_test() as pilot:
+            await _push_mappings(app, pilot)
+            assert app.screen.__class__.__name__ == "MappingsScreen"
+            assert app.screen.query_one("#title", Static)
+
+    async def test_bank_select_shows_mapping_details(self) -> None:
+        """Selecting a bank displays the mapping details."""
+        service = _make_service()
+        service.load_mapping.return_value = _make_bank_mapping()
+        app = BudgetTrackerApp(service=service)
+        async with app.run_test() as pilot:
+            await _push_mappings(app, pilot)
+
+            select = app.screen.query_one("#bank-select", Select)
+            select.value = "danske_bank"
+            await pilot.pause()
+            await pilot.pause()
+
+            service.load_mapping.assert_called_with("danske_bank")
+            details = app.screen.query_one("#mapping-details", Static)
+            rendered = str(details.render())
+            assert "danske_bank" in rendered
+
+    async def test_mapping_details_content(self) -> None:
+        """All mapping fields are shown in the details view."""
+        service = _make_service()
+        service.load_mapping.return_value = _make_bank_mapping()
+        app = BudgetTrackerApp(service=service)
+        async with app.run_test() as pilot:
+            await _push_mappings(app, pilot)
+
+            select = app.screen.query_one("#bank-select", Select)
+            select.value = "danske_bank"
+            await pilot.pause()
+            await pilot.pause()
+
+            details = app.screen.query_one("#mapping-details", Static)
+            rendered = str(details.render())
+            for expected in ["Dato", "Beløb", "Tekst", "%d-%m-%Y", "DKK"]:
+                assert expected in rendered, f"Expected '{expected}' in mapping details"
+
+    async def test_no_banks_shows_message(self) -> None:
+        """Empty bank list shows a 'no banks' message."""
+        service = _make_service(banks=[])
+        app = BudgetTrackerApp(service=service)
+        async with app.run_test() as pilot:
+            await _push_mappings(app, pilot)
+
+            no_banks_msg = app.screen.query_one("#no-banks-msg", Static)
+            assert no_banks_msg.display is True
+            bank_row = app.screen.query_one("#bank-row")
+            assert bank_row.display is False
+
+    async def test_escape_returns_home(self) -> None:
+        """Escape pops back to the home screen."""
+        app = BudgetTrackerApp(service=_make_service())
+        async with app.run_test() as pilot:
+            await _push_mappings(app, pilot)
+            assert app.screen.__class__.__name__ == "MappingsScreen"
+
+            await pilot.press("escape")
+            assert app.screen.__class__.__name__ == "HomeScreen"
+
+
+def _make_bank_mapping() -> MagicMock:
+    """Create a mock BankMapping with realistic field values."""
+    mapping = MagicMock()
+    mapping.bank_name = "danske_bank"
+    mapping.date_format = "%d-%m-%Y"
+    mapping.decimal_separator = ","
+    mapping.default_currency = "DKK"
+    mapping.blacklist_keywords = ["OVERFOERSEL"]
+
+    cm = MagicMock()
+    cm.date_column = "Dato"
+    cm.amount_column = "Beløb"
+    cm.description_columns = ["Tekst", "Tekst2"]
+    cm.currency_column = None
+    mapping.column_mapping = cm
+
+    return mapping

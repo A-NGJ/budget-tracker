@@ -60,7 +60,7 @@ class HomeScreen(Screen):
         self.app.push_screen("blacklist")
 
     def action_mappings(self) -> None:
-        self.app.push_screen("placeholder")
+        self.app.push_screen("mappings")
 
     def action_clear_cache(self) -> None:
         self.app.push_screen("placeholder")

@@ -194,6 +194,35 @@ ExportScreen #export-result {
     text-align: center;
 }
 
+/* MappingsScreen styles */
+MappingsScreen #title {
+    text-align: center;
+    text-style: bold;
+    margin-bottom: 1;
+    width: 100%;
+}
+
+MappingsScreen #no-banks-msg {
+    margin: 1 2;
+    text-align: center;
+}
+
+MappingsScreen #bank-row {
+    margin: 0 2;
+    height: 3;
+}
+
+MappingsScreen #bank-select {
+    width: 1fr;
+}
+
+MappingsScreen #mapping-details {
+    margin: 1 2;
+    height: auto;
+    border: round $primary;
+    padding: 1 2;
+}
+
 /* BlacklistScreen styles */
 BlacklistScreen #title {
     text-align: center;

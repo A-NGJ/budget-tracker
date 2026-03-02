@@ -13,6 +13,7 @@ from budget_tracker.tui.screens.categorization import CategorizationScreen
 from budget_tracker.tui.screens.export import ExportScreen
 from budget_tracker.tui.screens.file_selection import FileSelectionScreen
 from budget_tracker.tui.screens.home import HomeScreen
+from budget_tracker.tui.screens.mappings import MappingsScreen
 from budget_tracker.tui.screens.period_selection import PeriodSelectionScreen
 from budget_tracker.tui.screens.placeholder import PlaceholderScreen
 from budget_tracker.tui.screens.transfer_review import TransferReviewScreen
@@ -28,6 +29,7 @@ class BudgetTrackerApp(App[None]):
     SCREENS: ClassVar[dict[str, type]] = {
         "home": HomeScreen,
         "blacklist": BlacklistScreen,
+        "mappings": MappingsScreen,
         "placeholder": PlaceholderScreen,
         "file_selection": FileSelectionScreen,
         "transfer_review": TransferReviewScreen,
