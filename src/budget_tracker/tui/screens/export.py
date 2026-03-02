@@ -50,6 +50,8 @@ class ExportScreen(Screen):
     app: BudgetTrackerApp
 
     BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("j", "vim_down", "Down", show=False),
+        Binding("k", "vim_up", "Up", show=False),
         Binding("escape", "go_back", "Back"),
         Binding("question_mark", "help", "Help", key_display="?"),
     ]
@@ -163,6 +165,16 @@ class ExportScreen(Screen):
         result_widget = self.query_one("#export-result", Static)
         result_widget.update(f"[bold red]Export failed:[/bold red] {error}")
         result_widget.display = True
+
+    def action_vim_down(self) -> None:
+        focused = self.app.focused
+        if isinstance(focused, OptionList):
+            focused.action_cursor_down()
+
+    def action_vim_up(self) -> None:
+        focused = self.app.focused
+        if isinstance(focused, OptionList):
+            focused.action_cursor_up()
 
     def action_go_back(self) -> None:
         self.app.pop_screen()

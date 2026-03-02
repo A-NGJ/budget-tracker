@@ -138,6 +138,8 @@ class PeriodSelectionScreen(Screen):
     app: BudgetTrackerApp
 
     BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("j", "vim_down", "Down", show=False),
+        Binding("k", "vim_up", "Up", show=False),
         Binding("escape", "go_back", "Back"),
         Binding("question_mark", "help", "Help", key_display="?"),
     ]
@@ -156,7 +158,7 @@ class PeriodSelectionScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        transactions = self.app.pipeline_state.transactions_to_categorize
+        transactions = self.app.pipeline_state.parsed_transactions
         self._presets = _build_presets(transactions)
 
         option_list = self.query_one("#preset-list", OptionList)
@@ -214,17 +216,27 @@ class PeriodSelectionScreen(Screen):
         state = self.app.pipeline_state
         state.period = period
 
-        # Filter transactions to selected period
+        # Filter parsed transactions to selected period
         filtered = []
-        for txn in state.transactions_to_categorize:
+        for txn in state.parsed_transactions:
             if period.from_date and txn.date < period.from_date:
                 continue
             if period.to_date and txn.date > period.to_date:
                 continue
             filtered.append(txn)
-        state.transactions_to_categorize = filtered
+        state.parsed_transactions = filtered
 
-        self.app.push_screen("categorization")
+        self.app.push_screen("transfer_review")
+
+    def action_vim_down(self) -> None:
+        focused = self.app.focused
+        if isinstance(focused, OptionList):
+            focused.action_cursor_down()
+
+    def action_vim_up(self) -> None:
+        focused = self.app.focused
+        if isinstance(focused, OptionList):
+            focused.action_cursor_up()
 
     def action_go_back(self) -> None:
         self.app.pop_screen()

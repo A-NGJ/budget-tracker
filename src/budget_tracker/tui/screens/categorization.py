@@ -10,6 +10,7 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import DataTable, Footer, Input, OptionList, Static
 
+from budget_tracker.tui.screens.export import ExportScreen
 from budget_tracker.tui.widgets.category_list import CategoryList
 from budget_tracker.tui.widgets.help_overlay import HelpOverlay
 from budget_tracker.tui.widgets.transaction_detail import TransactionDetail
@@ -323,7 +324,7 @@ class CategorizationScreen(Screen):
                 categorized.append(std_txn)
 
         self.app.pipeline_state.categorized_transactions = categorized
-        self.app.push_screen("placeholder")
+        self.app.push_screen(ExportScreen())
 
 
 class ConfirmExitScreen(Screen[bool]):

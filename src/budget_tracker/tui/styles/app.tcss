@@ -119,6 +119,81 @@ TransferReviewScreen #loading {
     margin: 0 2;
 }
 
+/* PeriodSelectionScreen styles */
+PeriodSelectionScreen #title {
+    text-align: center;
+    text-style: bold;
+    margin-bottom: 1;
+    width: 100%;
+}
+
+PeriodSelectionScreen #preset-list {
+    height: auto;
+    max-height: 12;
+    margin: 0 2;
+}
+
+PeriodSelectionScreen #custom-range-inputs {
+    margin: 1 2;
+    height: auto;
+}
+
+PeriodSelectionScreen #custom-label {
+    margin-bottom: 1;
+    text-style: bold;
+}
+
+PeriodSelectionScreen #from-date,
+PeriodSelectionScreen #to-date {
+    margin-bottom: 1;
+}
+
+/* ExportScreen styles */
+ExportScreen #title {
+    text-align: center;
+    text-style: bold;
+    margin-bottom: 1;
+    width: 100%;
+}
+
+ExportScreen #loading {
+    height: 1;
+    margin: 0 2;
+}
+
+ExportScreen #analytics-panel {
+    margin: 0 2;
+    height: auto;
+    border: round $primary;
+    padding: 1 2;
+}
+
+ExportScreen #category-table {
+    margin-top: 1;
+    height: auto;
+    max-height: 16;
+}
+
+ExportScreen #export-section {
+    margin: 1 2;
+    height: auto;
+}
+
+ExportScreen #format-label {
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+ExportScreen #format-list {
+    height: auto;
+    max-height: 6;
+}
+
+ExportScreen #export-result {
+    margin: 1 2;
+    text-align: center;
+}
+
 /* Placeholder screen styles */
 PlaceholderScreen {
     align: center middle;

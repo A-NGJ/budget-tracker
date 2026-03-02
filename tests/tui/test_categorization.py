@@ -9,6 +9,11 @@ from unittest.mock import MagicMock
 import pytest
 from textual.widgets import DataTable, Input, OptionList, Static
 
+from budget_tracker.analytics.models import (
+    AnalyticsPeriod,
+    AnalyticsResult,
+    SummaryData,
+)
 from budget_tracker.parsers.csv_parser import ParsedTransaction
 from budget_tracker.services.budget_service import BudgetService
 from budget_tracker.tui.app import BudgetTrackerApp
@@ -60,12 +65,29 @@ def mock_service() -> MagicMock:
     service.cache_category.return_value = None
     service.save_cache.return_value = None
     service.create_transaction.side_effect = lambda *_: MagicMock()
+    # ExportScreen dependencies (loaded after categorization finishes)
+    _period = AnalyticsPeriod(from_date=None, to_date=None, label="All Time")
+    service.compute_analytics.return_value = AnalyticsResult(
+        summary=SummaryData(
+            total_transactions=0,
+            total_income=Decimal("0"),
+            total_expenses=Decimal("0"),
+            net=Decimal("0"),
+            avg_transaction=Decimal("0"),
+            period=_period,
+        ),
+        category_data=[],
+        monthly_data=[],
+        source_data=[],
+        period=_period,
+    )
     return service
 
 
 @pytest.fixture
 def app(mock_service: MagicMock) -> BudgetTrackerApp:
     a = BudgetTrackerApp(service=mock_service)
+    a.pipeline_state.period = AnalyticsPeriod(from_date=None, to_date=None, label="All Time")
     a.pipeline_state.transactions_to_categorize = list(TRANSACTIONS)
     return a
 
@@ -493,5 +515,5 @@ class TestCategorizationCompletion:
             await pilot.press("c")
             await pilot.pause()
 
-            assert app.screen.__class__.__name__ == "PlaceholderScreen"
+            assert app.screen.__class__.__name__ == "ExportScreen"
             assert len(app.pipeline_state.categorized_transactions) == 3

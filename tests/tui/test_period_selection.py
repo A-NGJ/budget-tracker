@@ -9,6 +9,11 @@ from unittest.mock import MagicMock
 import pytest
 from textual.widgets import Input, OptionList
 
+from budget_tracker.analytics.models import (
+    AnalyticsPeriod,
+    AnalyticsResult,
+    SummaryData,
+)
 from budget_tracker.parsers.csv_parser import ParsedTransaction
 from budget_tracker.services.budget_service import BudgetService
 from budget_tracker.tui.app import BudgetTrackerApp
@@ -46,20 +51,41 @@ TXN_MAR = ParsedTransaction(
 TRANSACTIONS = [TXN_JAN, TXN_FEB, TXN_MAR]
 
 
+_STUB_PERIOD = AnalyticsPeriod(from_date=None, to_date=None, label="All Time")
+_STUB_ANALYTICS = AnalyticsResult(
+    summary=SummaryData(
+        total_transactions=0,
+        total_income=Decimal("0"),
+        total_expenses=Decimal("0"),
+        net=Decimal("0"),
+        avg_transaction=Decimal("0"),
+        period=_STUB_PERIOD,
+    ),
+    category_data=[],
+    monthly_data=[],
+    source_data=[],
+    period=_STUB_PERIOD,
+)
+
+
 @pytest.fixture
 def mock_service() -> MagicMock:
     service = MagicMock(spec=BudgetService)
     service.list_mappings.return_value = []
-    # CategorizationScreen dependencies (loaded after period selection finishes)
+    # TransferReviewScreen dependencies (loaded after period selection finishes)
+    service.detect_transfers.return_value = ([], [])
+    # CategorizationScreen dependencies (loaded after transfer review finishes)
     service.load_categories.return_value = {}
     service.get_cached_category.return_value = None
+    # ExportScreen dependencies (loaded after categorization finishes)
+    service.compute_analytics.return_value = _STUB_ANALYTICS
     return service
 
 
 @pytest.fixture
 def app(mock_service: MagicMock) -> BudgetTrackerApp:
     a = BudgetTrackerApp(service=mock_service)
-    a.pipeline_state.transactions_to_categorize = list(TRANSACTIONS)
+    a.pipeline_state.parsed_transactions = list(TRANSACTIONS)
     return a
 
 
@@ -131,7 +157,7 @@ async def test_select_all_time_pushes_categorization(app: BudgetTrackerApp) -> N
         await pilot.pause()
 
         # All transactions should remain (no filtering for All time)
-        assert len(app.pipeline_state.transactions_to_categorize) == 3
+        assert len(app.pipeline_state.parsed_transactions) == 3
         assert app.pipeline_state.period is not None
         assert app.pipeline_state.period.label == "All Time"
 
@@ -205,7 +231,7 @@ async def test_custom_range_filters_transactions(app: BudgetTrackerApp) -> None:
         assert app.pipeline_state.period.from_date == date(2024, 1, 1)
         assert app.pipeline_state.period.to_date == date(2024, 2, 28)
         # Only TXN_JAN and TXN_FEB should remain
-        assert len(app.pipeline_state.transactions_to_categorize) == 2
+        assert len(app.pipeline_state.parsed_transactions) == 2
 
 
 # ── Navigation tests ─────────────────────────────────────────

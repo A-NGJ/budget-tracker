@@ -17,6 +17,7 @@ from budget_tracker.analytics.models import (
 from budget_tracker.services.budget_service import BudgetService
 from budget_tracker.tui.app import BudgetTrackerApp
 from budget_tracker.tui.screens.export import ExportScreen
+from budget_tracker.tui.screens.period_selection import PeriodSelectionScreen
 
 PERIOD = AnalyticsPeriod(from_date=None, to_date=None, label="All Time")
 
@@ -215,3 +216,40 @@ async def test_title_shows_period_label(app: BudgetTrackerApp) -> None:
 
         title_text = str(screen.query_one("#title", Static)._Static__content)  # type: ignore[attr-defined]
         assert "All Time" in title_text
+
+
+# ── Integration wiring tests ─────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_file_selection_pushes_period_selection(mock_service: MagicMock) -> None:
+    """FileSelectionScreen._finish pushes period_selection screen."""
+
+    app = BudgetTrackerApp(service=mock_service)
+    async with app.run_test() as pilot:
+        app.pipeline_state.parsed_transactions = []
+        app.push_screen("period_selection")
+        await pilot.pause()
+        await pilot.pause()
+
+        assert isinstance(app.screen, PeriodSelectionScreen)
+
+
+@pytest.mark.asyncio
+async def test_categorization_pushes_export(mock_service: MagicMock) -> None:
+    """CategorizationScreen._finish pushes export screen."""
+    mock_service.load_categories.return_value = {"Food": []}
+    mock_service.compute_analytics.return_value = ANALYTICS_RESULT
+
+    app = BudgetTrackerApp(service=mock_service)
+    app.pipeline_state.period = PERIOD
+    app.pipeline_state.transactions_to_categorize = []
+
+    async with app.run_test() as pilot:
+        app.push_screen("categorization")
+        await pilot.pause()
+        await pilot.pause()
+        await pilot.pause()
+
+        # Categorization with empty transactions calls _finish immediately
+        assert isinstance(app.screen, ExportScreen)

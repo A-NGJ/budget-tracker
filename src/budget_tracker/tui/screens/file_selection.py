@@ -226,7 +226,7 @@ class FileSelectionScreen(Screen):
         state.mappings = dict(self._mappings)
         state.parsed_transactions = [txn for f in self._files for txn in f.parsed_transactions]
 
-        self.app.push_screen("transfer_review")
+        self.app.push_screen("period_selection")
 
     def _refresh_file_list(self) -> None:
         file_list = self.query_one("#file-list", Vertical)
