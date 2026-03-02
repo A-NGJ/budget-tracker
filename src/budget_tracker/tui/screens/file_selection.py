@@ -9,8 +9,10 @@ from typing import TYPE_CHECKING, ClassVar
 from textual import work
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
+from textual.content import Content
 from textual.screen import Screen
 from textual.widgets import Footer, Input, LoadingIndicator, Select, Static
+from textual_autocomplete import PathAutoComplete
 
 from budget_tracker.tui.screens.column_mapping import ColumnMappingScreen
 from budget_tracker.tui.widgets.help_overlay import HelpOverlay
@@ -74,7 +76,11 @@ class FileSelectionScreen(Screen):
         yield Vertical(id="file-list")
         yield LoadingIndicator(id="loading")
         with Horizontal(id="input-row"):
-            yield Input(placeholder="Path to CSV file...", id="file-input")
+            file_input = Input(placeholder="Path to CSV file...", id="file-input")
+            yield file_input
+        yield PathAutoComplete(
+            target=file_input, path=".", folder_prefix=Content(""), file_prefix=Content("")
+        )
         with Horizontal(id="bank-row"):
             yield Select(
                 self._bank_options,
