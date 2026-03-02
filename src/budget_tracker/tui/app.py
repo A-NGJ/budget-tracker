@@ -8,6 +8,7 @@ from textual.app import App
 
 from budget_tracker.config.settings import get_settings
 from budget_tracker.services.budget_service import BudgetService
+from budget_tracker.tui.screens.blacklist import BlacklistScreen
 from budget_tracker.tui.screens.categorization import CategorizationScreen
 from budget_tracker.tui.screens.export import ExportScreen
 from budget_tracker.tui.screens.file_selection import FileSelectionScreen
@@ -26,6 +27,7 @@ class BudgetTrackerApp(App[None]):
 
     SCREENS: ClassVar[dict[str, type]] = {
         "home": HomeScreen,
+        "blacklist": BlacklistScreen,
         "placeholder": PlaceholderScreen,
         "file_selection": FileSelectionScreen,
         "transfer_review": TransferReviewScreen,

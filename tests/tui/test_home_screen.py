@@ -32,11 +32,11 @@ class TestHomeScreen:
             await pilot.press("p")
             assert app.screen.__class__.__name__ == "FileSelectionScreen"
 
-    async def test_blacklist_key_pushes_placeholder(self, app: BudgetTrackerApp) -> None:
-        """Pressing B navigates to placeholder screen."""
+    async def test_blacklist_key_pushes_blacklist_screen(self, app: BudgetTrackerApp) -> None:
+        """Pressing B navigates to blacklist screen."""
         async with app.run_test() as pilot:
             await pilot.press("b")
-            assert app.screen.__class__.__name__ == "PlaceholderScreen"
+            assert app.screen.__class__.__name__ == "BlacklistScreen"
 
     async def test_mappings_key_pushes_placeholder(self, app: BudgetTrackerApp) -> None:
         """Pressing M navigates to placeholder screen."""
