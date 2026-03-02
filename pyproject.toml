@@ -39,7 +39,7 @@ dev = [
 ]
 
 [project.scripts]
-budget-tracker = "budget_tracker.cli.main:app"
+budget-tracker = "budget_tracker.tui:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -50,6 +50,7 @@ python_functions = ["test_*"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+extend-exclude = ["*.tcss"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "ANN", "B", "C4", "DTZ", "T10", "EM", "ISC", "ICN", "G", "PIE", "PYI", "Q", "SIM", "TCH", "ARG", "PTH", "PD", "PL", "RUF"]

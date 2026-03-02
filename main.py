@@ -1,4 +1,4 @@
-from budget_tracker.cli.main import app
+from budget_tracker.tui import main
 
 if __name__ == "__main__":
-    app()
+    main()
