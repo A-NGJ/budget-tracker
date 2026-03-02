@@ -15,7 +15,6 @@ from budget_tracker.tui.screens.file_selection import FileSelectionScreen
 from budget_tracker.tui.screens.home import HomeScreen
 from budget_tracker.tui.screens.mappings import MappingsScreen
 from budget_tracker.tui.screens.period_selection import PeriodSelectionScreen
-from budget_tracker.tui.screens.placeholder import PlaceholderScreen
 from budget_tracker.tui.screens.transfer_review import TransferReviewScreen
 from budget_tracker.tui.state import PipelineState
 
@@ -30,7 +29,6 @@ class BudgetTrackerApp(App[None]):
         "home": HomeScreen,
         "blacklist": BlacklistScreen,
         "mappings": MappingsScreen,
-        "placeholder": PlaceholderScreen,
         "file_selection": FileSelectionScreen,
         "transfer_review": TransferReviewScreen,
         "period_selection": PeriodSelectionScreen,

@@ -6,7 +6,6 @@ from budget_tracker.tui.screens.file_selection import FileSelectionScreen
 from budget_tracker.tui.screens.home import HomeScreen
 from budget_tracker.tui.screens.mappings import MappingsScreen
 from budget_tracker.tui.screens.period_selection import PeriodSelectionScreen
-from budget_tracker.tui.screens.placeholder import PlaceholderScreen
 from budget_tracker.tui.screens.transfer_review import TransferReviewScreen
 
 __all__ = [
@@ -18,6 +17,5 @@ __all__ = [
     "HomeScreen",
     "MappingsScreen",
     "PeriodSelectionScreen",
-    "PlaceholderScreen",
     "TransferReviewScreen",
 ]

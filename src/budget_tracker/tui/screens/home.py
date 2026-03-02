@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 from textual.binding import Binding
+from textual.containers import Vertical
 from textual.screen import Screen
 from textual.widgets import Footer, Static
 
@@ -13,6 +14,8 @@ from budget_tracker.tui.widgets.help_overlay import HelpOverlay
 if TYPE_CHECKING:
     from textual.app import ComposeResult
     from textual.binding import BindingType
+
+    from budget_tracker.tui.app import BudgetTrackerApp
 
 
 HELP_TEXT = """\
@@ -31,8 +34,52 @@ HELP_TEXT = """\
 """
 
 
+class ConfirmClearCacheScreen(Screen[bool]):
+    """Confirmation dialog for clearing the category cache."""
+
+    BINDINGS: ClassVar[list[BindingType]] = [
+        Binding("y", "confirm", "Yes"),
+        Binding("n", "cancel", "No"),
+        Binding("escape", "cancel", "Cancel"),
+    ]
+
+    DEFAULT_CSS = """
+    ConfirmClearCacheScreen {
+        align: center middle;
+    }
+    #confirm-dialog {
+        width: 50;
+        height: auto;
+        background: $surface;
+        border: thick $primary;
+        padding: 1 2;
+    }
+    #confirm-title {
+        text-align: center;
+        text-style: bold;
+        margin-bottom: 1;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="confirm-dialog"):
+            yield Static("Clear Category Cache?", id="confirm-title")
+            yield Static("Delete all saved category mappings?")
+            yield Static("Transactions will be re-prompted on next run.")
+            yield Static("")
+            yield Static("  [bold cyan]\\[Y][/] Yes   [bold cyan]\\[N][/] No")
+
+    def action_confirm(self) -> None:
+        self.dismiss(True)
+
+    def action_cancel(self) -> None:
+        self.dismiss(False)
+
+
 class HomeScreen(Screen):
     """Main menu screen with keyboard shortcuts."""
+
+    app: BudgetTrackerApp
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("p", "process", "Process statements", key_display="P"),
@@ -63,7 +110,12 @@ class HomeScreen(Screen):
         self.app.push_screen("mappings")
 
     def action_clear_cache(self) -> None:
-        self.app.push_screen("placeholder")
+        self.app.push_screen(ConfirmClearCacheScreen(), callback=self._on_clear_cache_result)
+
+    def _on_clear_cache_result(self, confirmed: bool | None, /) -> None:
+        if confirmed:
+            self.app.service.clear_cache()
+            self.notify("Category cache cleared.", severity="information")
 
     def action_quit(self) -> None:
         self.app.exit()

@@ -259,6 +259,66 @@ class TestMappingsScreen:
             assert app.screen.__class__.__name__ == "HomeScreen"
 
 
+# ── Cache Clear Tests ─────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+class TestCacheClear:
+    """Tests for the cache clear confirmation dialog."""
+
+    async def test_clear_cache_shows_confirmation(self) -> None:
+        """Pressing C on home screen opens the confirmation dialog."""
+        app = BudgetTrackerApp(service=_make_service())
+        async with app.run_test() as pilot:
+            await pilot.press("c")
+            assert app.screen.__class__.__name__ == "ConfirmClearCacheScreen"
+
+    async def test_clear_cache_confirm_yes(self) -> None:
+        """Pressing Y clears the cache and returns to home."""
+        service = _make_service()
+        app = BudgetTrackerApp(service=service)
+        async with app.run_test() as pilot:
+            await pilot.press("c")
+            assert app.screen.__class__.__name__ == "ConfirmClearCacheScreen"
+
+            await pilot.press("y")
+            await pilot.pause()
+
+            service.clear_cache.assert_called_once()
+            assert app.screen.__class__.__name__ == "HomeScreen"
+
+    async def test_clear_cache_confirm_no(self) -> None:
+        """Pressing N cancels and returns to home without clearing."""
+        service = _make_service()
+        app = BudgetTrackerApp(service=service)
+        async with app.run_test() as pilot:
+            await pilot.press("c")
+            assert app.screen.__class__.__name__ == "ConfirmClearCacheScreen"
+
+            await pilot.press("n")
+            await pilot.pause()
+
+            service.clear_cache.assert_not_called()
+            assert app.screen.__class__.__name__ == "HomeScreen"
+
+    async def test_clear_cache_escape_cancels(self) -> None:
+        """Pressing Escape cancels and returns to home without clearing."""
+        service = _make_service()
+        app = BudgetTrackerApp(service=service)
+        async with app.run_test() as pilot:
+            await pilot.press("c")
+            assert app.screen.__class__.__name__ == "ConfirmClearCacheScreen"
+
+            await pilot.press("escape")
+            await pilot.pause()
+
+            service.clear_cache.assert_not_called()
+            assert app.screen.__class__.__name__ == "HomeScreen"
+
+
+# ── Helpers (shared) ─────────────────────────────────────────────────────
+
+
 def _make_bank_mapping() -> MagicMock:
     """Create a mock BankMapping with realistic field values."""
     mapping = MagicMock()

@@ -44,11 +44,11 @@ class TestHomeScreen:
             await pilot.press("m")
             assert app.screen.__class__.__name__ == "MappingsScreen"
 
-    async def test_clear_cache_key_pushes_placeholder(self, app: BudgetTrackerApp) -> None:
-        """Pressing C navigates to placeholder screen."""
+    async def test_clear_cache_key_pushes_confirmation(self, app: BudgetTrackerApp) -> None:
+        """Pressing C opens the cache clear confirmation dialog."""
         async with app.run_test() as pilot:
             await pilot.press("c")
-            assert app.screen.__class__.__name__ == "PlaceholderScreen"
+            assert app.screen.__class__.__name__ == "ConfirmClearCacheScreen"
 
     async def test_escape_from_file_selection_returns_home(self, app: BudgetTrackerApp) -> None:
         """Pressing Escape on file selection screen returns to home."""

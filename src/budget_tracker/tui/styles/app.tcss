@@ -276,12 +276,3 @@ BlacklistScreen #add-btn {
     min-width: 8;
 }
 
-/* Placeholder screen styles */
-PlaceholderScreen {
-    align: center middle;
-}
-
-PlaceholderScreen #placeholder-text {
-    text-align: center;
-    text-style: italic;
-}
