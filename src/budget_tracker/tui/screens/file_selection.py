@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, ClassVar
 
 from textual import work
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal
 from textual.content import Content
 from textual.screen import Screen
-from textual.widgets import Footer, Input, LoadingIndicator, Select, Static
+from textual.widgets import Footer, Input, LoadingIndicator, OptionList, Select, Static
 from textual_autocomplete import PathAutoComplete
 
 from budget_tracker.tui.screens.column_mapping import ColumnMappingScreen
@@ -30,11 +30,12 @@ HELP_TEXT = """\
 [b]File Selection[/b]
 
   [cyan]A[/cyan]      Add file to queue
-  [cyan]R[/cyan]      Remove last file
+  [cyan]R[/cyan]      Remove file
   [cyan]Enter[/cyan]  Continue (when file input is empty)
 
 [b]Navigation[/b]
 
+  [cyan]↑/↓/j/k[/cyan] Navigate file list
   [cyan]?[/cyan]      Show this help
   [cyan]Escape[/cyan] Go back to home
 """
@@ -61,6 +62,8 @@ class FileSelectionScreen(Screen):
         Binding("r", "remove_file", "Remove file", key_display="R"),
         Binding("enter", "continue_pipeline", "Continue"),
         Binding("escape", "go_back", "Back"),
+        Binding("j", "vim_down", "Down", show=False),
+        Binding("k", "vim_up", "Up", show=False),
         Binding("question_mark", "help", "Help", key_display="?"),
     ]
 
@@ -73,7 +76,7 @@ class FileSelectionScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Static("Process Bank Statements", id="title")
         yield Static("Files to process:", id="file-list-label")
-        yield Vertical(id="file-list")
+        yield OptionList(id="file-list")
         yield LoadingIndicator(id="loading")
         with Horizontal(id="input-row"):
             file_input = Input(placeholder="Path to CSV file...", id="file-input")
@@ -97,6 +100,7 @@ class FileSelectionScreen(Screen):
     def on_mount(self) -> None:
         self.query_one("#loading", LoadingIndicator).display = False
         self.query_one("#continue-hint").display = False
+        self.query_one("#file-list", OptionList).display = False
         saved_banks = self.app.service.list_mappings()
         for bank in saved_banks:
             self._bank_options.insert(-1, (bank, bank))
@@ -200,12 +204,29 @@ class FileSelectionScreen(Screen):
         self.query_one("#loading", LoadingIndicator).display = visible
 
     def action_remove_file(self) -> None:
-        if not self._files:
-            self.notify("No files to remove.", severity="warning")
+        file_list = self.query_one("#file-list", OptionList)
+        idx = file_list.highlighted
+        if idx is None or not self._files:
             return
 
-        self._files.pop()
+        del self._files[idx]
         self._refresh_file_list()
+
+    def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:  # noqa: ARG002
+        if action == "remove_file":
+            file_list = self.query_one("#file-list", OptionList)
+            return file_list.highlighted is not None and bool(self._files)
+        return True
+
+    def action_vim_down(self) -> None:
+        focused = self.app.focused
+        if isinstance(focused, OptionList):
+            focused.action_cursor_down()
+
+    def action_vim_up(self) -> None:
+        focused = self.app.focused
+        if isinstance(focused, OptionList):
+            focused.action_cursor_up()
 
     def action_continue_pipeline(self) -> None:
         if not self._files:
@@ -235,13 +256,20 @@ class FileSelectionScreen(Screen):
         self.app.push_screen("period_selection")
 
     def _refresh_file_list(self) -> None:
-        file_list = self.query_one("#file-list", Vertical)
-        file_list.remove_children()
+        file_list = self.query_one("#file-list", OptionList)
+        prev_highlight = file_list.highlighted
+        file_list.clear_options()
         status_icons = {"pending": "○", "parsing": "◌", "done": "✓", "error": "✗"}
         for i, entry in enumerate(self._files, 1):
             icon = status_icons.get(entry.status, "○")
-            label = f"  {i}. {icon} {entry.path.name} ({entry.bank_name})"
+            label = f"{i}. {icon} {entry.path.name} ({entry.bank_name})"
             if entry.error_message:
                 label += f" — {entry.error_message}"
-            file_list.mount(Static(label, classes=f"file-entry status-{entry.status}"))
+            file_list.add_option(label)
+        if self._files:
+            if prev_highlight is not None and prev_highlight < len(self._files):
+                file_list.highlighted = prev_highlight
+            else:
+                file_list.highlighted = len(self._files) - 1
+        file_list.display = bool(self._files)
         self.query_one("#continue-hint").display = bool(self._files)

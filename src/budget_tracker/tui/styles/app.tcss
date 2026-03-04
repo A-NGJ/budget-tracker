@@ -51,9 +51,6 @@ FileSelectionScreen #file-list {
     margin: 0 2;
 }
 
-FileSelectionScreen .file-entry {
-    height: 1;
-}
 
 FileSelectionScreen #input-row {
     margin: 1 2 0 2;

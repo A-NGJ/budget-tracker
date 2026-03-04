@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
-from textual.widgets import Input, Static
+from textual.widgets import Input, OptionList, Static
 
 from budget_tracker.models.bank_mapping import BankMapping, ColumnMapping
 from budget_tracker.parsers.csv_parser import ParsedTransaction
@@ -100,15 +100,16 @@ class TestFileSelectionScreen:
         async with app.run_test() as pilot:
             await pilot.press("p")
             # Focus on file list area (not input) so Enter triggers the binding
-            app.screen.query_one("#file-list").focus()
+            app.screen.query_one("#file-list", OptionList).focus()
             await pilot.press("enter")
             # The notification is shown but we verify no screen change
             assert app.screen.__class__.__name__ == "FileSelectionScreen"
 
-    async def test_remove_file_empty_shows_notification(self, app: BudgetTrackerApp) -> None:
-        """Pressing R with no files shows warning notification."""
+    async def test_remove_file_empty_is_suppressed(self, app: BudgetTrackerApp) -> None:
+        """Pressing R with no files is suppressed by check_action."""
         async with app.run_test() as pilot:
             await pilot.press("p")
+            # R is disabled via check_action when no files are present
             await pilot.press("r")
             assert app.screen.__class__.__name__ == "FileSelectionScreen"
 
