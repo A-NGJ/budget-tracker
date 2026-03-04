@@ -40,6 +40,8 @@ class BlacklistScreen(Screen):
         Binding("escape", "go_back", "Back"),
         Binding("delete", "remove_keyword", "Remove", key_display="Del"),
         Binding("backspace", "remove_keyword", "Remove", show=False),
+        Binding("j", "vim_down", "Down", show=False),
+        Binding("k", "vim_up", "Up", show=False),
         Binding("question_mark", "help", "Help", key_display="?"),
     ]
 
@@ -139,6 +141,16 @@ class BlacklistScreen(Screen):
         self.app.service.remove_blacklist_keyword(self._current_bank, keyword)
         self._keywords = self.app.service.load_bank_blacklist(self._current_bank)
         self._refresh_keyword_list()
+
+    def action_vim_down(self) -> None:
+        focused = self.app.focused
+        if isinstance(focused, OptionList):
+            focused.action_cursor_down()
+
+    def action_vim_up(self) -> None:
+        focused = self.app.focused
+        if isinstance(focused, OptionList):
+            focused.action_cursor_up()
 
     def action_go_back(self) -> None:
         self.app.pop_screen()

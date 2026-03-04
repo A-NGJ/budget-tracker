@@ -69,6 +69,8 @@ class ColumnMappingScreen(ModalScreen[BankMapping | None]):
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("escape", "go_back", "Back / Cancel"),
+        Binding("j", "vim_down", "Down", show=False),
+        Binding("k", "vim_up", "Up", show=False),
     ]
 
     DEFAULT_CSS = """
@@ -122,6 +124,16 @@ class ColumnMappingScreen(ModalScreen[BankMapping | None]):
 
     async def on_mount(self) -> None:
         await self._render_step()
+
+    def action_vim_down(self) -> None:
+        focused = self.app.focused
+        if isinstance(focused, OptionList):
+            focused.action_cursor_down()
+
+    def action_vim_up(self) -> None:
+        focused = self.app.focused
+        if isinstance(focused, OptionList):
+            focused.action_cursor_up()
 
     async def action_go_back(self) -> None:
         if self._step_index == 0:
