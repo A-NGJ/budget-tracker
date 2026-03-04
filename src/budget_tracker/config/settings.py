@@ -20,21 +20,20 @@ class Settings(BaseSettings):
 
     categories_file: Path = Path.home() / ".budget-tracker" / "categories.yaml"
     default_categories_file: Path = Path.cwd() / "config" / "categories.yaml"
-    banks_dir: Path = Path.cwd() / "config" / "banks"
+    banks_dir: Path = Path.home() / ".budget-tracker" / "banks"
 
     default_output_filename: str = "standardized_transactions.xlsx"
     default_date_format: str = "%d-%m-%Y"  # DD-MM-YYYY format
 
-    # Google Sheets settings
-    google_credentials_dir: Path = Path.home() / ".budget-tracker"
-    google_credentials_file: Path = Path.home() / ".budget-tracker" / "credentials.json"
-    google_token_file: Path = Path.home() / ".budget-tracker" / "token.json"
     category_mappings_file: Path = Path.home() / ".budget-tracker" / "category_mappings.yaml"
-    google_sheets_retry_attempts: int = 3
-    google_sheets_retry_base_delay: float = 1.0  # seconds
 
     # CLI
     no_interactive: bool = False  # If True, disable interactive prompts
+
+    def ensure_banks_dir(self) -> Path:
+        """Ensure user banks dir exists."""
+        self.banks_dir.mkdir(parents=True, exist_ok=True)
+        return self.banks_dir
 
     def load_categories(self) -> dict[str, Any]:
         """Load categories from user's YAML file, seeding from default if needed."""
@@ -49,7 +48,7 @@ class Settings(BaseSettings):
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.banks_dir.mkdir(parents=True, exist_ok=True)
+        self.ensure_banks_dir()
 
 
 @cache

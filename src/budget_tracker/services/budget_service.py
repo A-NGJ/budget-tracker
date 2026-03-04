@@ -8,7 +8,7 @@ import yaml
 
 from budget_tracker.analytics.engine import AnalyticsEngine
 from budget_tracker.currency.converter import CurrencyConverter
-from budget_tracker.exporters import CSVExporter, ExcelExporter, GoogleSheetsExporter
+from budget_tracker.exporters import CSVExporter, ExcelExporter
 from budget_tracker.filters import TransferDetector
 from budget_tracker.models.bank_mapping import BankMapping
 from budget_tracker.models.transaction import StandardTransaction
@@ -33,6 +33,7 @@ class BudgetService:
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
+        self._settings.ensure_banks_dir()
         self._parser = CSVParser()
         self._transfer_detector = TransferDetector()
         self._currency_converter = CurrencyConverter()
@@ -175,15 +176,6 @@ class BudgetService:
     ) -> str:
         """Export transactions to CSV."""
         exporter = CSVExporter(self._settings, output_file=output_path)
-        return exporter.export(transactions)
-
-    def export_google_sheets(
-        self,
-        transactions: list[StandardTransaction],
-        analytics: AnalyticsResult,
-    ) -> str:
-        """Export transactions and analytics to Google Sheets."""
-        exporter = GoogleSheetsExporter(self._settings, analytics_result=analytics)
         return exporter.export(transactions)
 
     # ── Blacklist operations ─────────────────────────────────────────

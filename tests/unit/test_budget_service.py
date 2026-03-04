@@ -137,6 +137,20 @@ class TestBankMappingOperations:
         assert result == []
 
 
+class TestEnsureBanksDir:
+    def test_creates_banks_dir_when_missing(self, tmp_path: Path) -> None:
+        """Banks dir is created when it doesn't exist."""
+        service = _make_service(tmp_path)
+        banks_dir = service._settings.banks_dir
+        assert banks_dir.exists()
+
+    def test_no_error_when_banks_dir_exists(self, tmp_path: Path) -> None:
+        """Calling ensure_banks_dir when dir already exists is a no-op."""
+        service = _make_service(tmp_path)
+        service._settings.ensure_banks_dir()
+        assert service._settings.banks_dir.exists()
+
+
 class TestTransferOperations:
     def test_detect_transfers(self, tmp_path: Path) -> None:
         service = _make_service(tmp_path)
@@ -241,15 +255,6 @@ class TestExport:
             result = service.export_csv([], Path("/output/file.csv"))
             mock_cls.assert_called_once()
             assert result == "/output/file.csv"
-
-    def test_export_google_sheets(self, tmp_path: Path) -> None:
-        service = _make_service(tmp_path)
-        with patch("budget_tracker.services.budget_service.GoogleSheetsExporter") as mock_cls:
-            mock_cls.return_value.export.return_value = "https://sheets.google.com/..."
-
-            result = service.export_google_sheets([], MagicMock())
-            mock_cls.assert_called_once()
-            assert result == "https://sheets.google.com/..."
 
 
 class TestBlacklistOperations:

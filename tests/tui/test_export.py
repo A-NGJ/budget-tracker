@@ -67,7 +67,6 @@ def mock_service() -> MagicMock:
     service.compute_analytics.return_value = ANALYTICS_RESULT
     service.export_excel.return_value = "/tmp/budget_2024.xlsx"
     service.export_csv.return_value = "/tmp/budget_2024.csv"
-    service.export_google_sheets.return_value = "https://docs.google.com/spreadsheets/d/abc"
     return service
 
 
@@ -149,7 +148,7 @@ async def test_format_selector_has_three_options(app: BudgetTrackerApp) -> None:
         assert isinstance(screen, ExportScreen)
 
         format_list = screen.query_one("#format-list", OptionList)
-        assert format_list.option_count == 3
+        assert format_list.option_count == 2
 
 
 # ── Export tests ─────────────────────────────────────────────

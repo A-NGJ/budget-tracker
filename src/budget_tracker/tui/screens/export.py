@@ -32,7 +32,6 @@ HELP_TEXT = """\
 
   Excel — .xlsx with analytics sheet
   CSV   — plain transactions
-  Google Sheets — cloud spreadsheet
 """
 
 MAX_BAR_WIDTH = 20
@@ -40,7 +39,6 @@ MAX_BAR_WIDTH = 20
 EXPORT_FORMATS = [
     ("Excel (.xlsx)", "excel"),
     ("CSV (.csv)", "csv"),
-    ("Google Sheets", "google_sheets"),
 ]
 
 
@@ -145,10 +143,6 @@ class ExportScreen(Screen):
                 )
             elif format_key == "csv":
                 path = self.app.service.export_csv(state.categorized_transactions)
-            elif format_key == "google_sheets":
-                path = self.app.service.export_google_sheets(
-                    state.categorized_transactions, state.analytics
-                )
             else:
                 return
 
