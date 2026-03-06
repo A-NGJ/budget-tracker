@@ -75,13 +75,24 @@ class TransactionStore:
         """Distinct category values, sorted."""
         return sorted({txn.category for txn in self._transactions.values()})
 
-    def get_filtered(
+    def get_subcategories(self, category: str) -> list[str]:
+        """Distinct subcategory values for a category, sorted."""
+        return sorted(
+            {
+                t.subcategory
+                for t in self._transactions.values()
+                if t.category == category and t.subcategory is not None
+            }
+        )
+
+    def get_filtered(  # noqa: PLR0913
         self,
         source: str | None = None,
         category: str | None = None,
         subcategory: str | None = None,
         from_date: date | None = None,
         to_date: date | None = None,
+        keyword: str | None = None,
     ) -> list[StandardTransaction]:
         """Return transactions matching all provided filters."""
         result = list(self._transactions.values())
@@ -95,6 +106,9 @@ class TransactionStore:
             result = [t for t in result if t.date >= from_date]
         if to_date is not None:
             result = [t for t in result if t.date <= to_date]
+        if keyword is not None:
+            kw = keyword.lower()
+            result = [t for t in result if kw in (t.description or "").lower()]
         return result
 
     @property

@@ -232,3 +232,63 @@ class TestGetFiltered:
         store = self._build_store()
         result = store.get_filtered()
         assert len(result) == 3
+
+    def test_filter_by_keyword(self) -> None:
+        store = self._build_store()
+        result = store.get_filtered(keyword="TXN2")
+        assert len(result) == 1
+        assert result[0].description == "txn2"
+
+    def test_filter_by_keyword_no_match(self) -> None:
+        store = self._build_store()
+        result = store.get_filtered(keyword="nonexistent")
+        assert len(result) == 0
+
+    def test_filter_by_keyword_combined_with_other_filters(self) -> None:
+        store = self._build_store()
+        result = store.get_filtered(source="Danske Bank", keyword="txn3")
+        assert len(result) == 1
+        assert result[0].description == "txn3"
+
+
+class TestGetSubcategories:
+    def test_get_subcategories(self) -> None:
+        store = TransactionStore(Path("/dev/null"))
+        store.add_many(
+            [
+                _make_txn(
+                    {"category": "Food & Drinks", "subcategory": "Groceries", "description": "A"}
+                ),
+                _make_txn(
+                    {"category": "Food & Drinks", "subcategory": "Restaurants", "description": "B"}
+                ),
+                _make_txn(
+                    {"category": "Food & Drinks", "subcategory": "Groceries", "description": "C"}
+                ),
+                _make_txn(
+                    {
+                        "category": "Transportation",
+                        "subcategory": "Public Transport",
+                        "description": "D",
+                    }
+                ),
+            ]
+        )
+        assert store.get_subcategories("Food & Drinks") == ["Groceries", "Restaurants"]
+
+    def test_get_subcategories_excludes_none(self) -> None:
+        store = TransactionStore(Path("/dev/null"))
+        store.add_many(
+            [
+                _make_txn(
+                    {"category": "Food & Drinks", "subcategory": "Groceries", "description": "A"}
+                ),
+                _make_txn({"category": "Food & Drinks", "subcategory": None, "description": "B"}),
+            ]
+        )
+        assert store.get_subcategories("Food & Drinks") == ["Groceries"]
+
+    def test_get_subcategories_unknown_category(self) -> None:
+        store = TransactionStore(Path("/dev/null"))
+        store.add_many([_make_txn()])
+        assert store.get_subcategories("Unknown") == []

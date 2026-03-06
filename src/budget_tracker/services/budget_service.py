@@ -220,13 +220,14 @@ class BudgetService:
         """Return all stored transactions."""
         return self._transaction_store.get_all()
 
-    def get_filtered_transactions(
+    def get_filtered_transactions(  # noqa: PLR0913
         self,
         source: str | None = None,
         category: str | None = None,
         subcategory: str | None = None,
         from_date: date | None = None,
         to_date: date | None = None,
+        keyword: str | None = None,
     ) -> list[StandardTransaction]:
         """Return filtered transactions from store."""
         return self._transaction_store.get_filtered(
@@ -235,4 +236,17 @@ class BudgetService:
             subcategory=subcategory,
             from_date=from_date,
             to_date=to_date,
+            keyword=keyword,
         )
+
+    def get_transaction_sources(self) -> list[str]:
+        return self._transaction_store.get_sources()
+
+    def get_transaction_categories(self) -> list[str]:
+        return self._transaction_store.get_categories()
+
+    def get_transaction_subcategories(self, category: str) -> list[str]:
+        return self._transaction_store.get_subcategories(category)
+
+    def transaction_count(self) -> int:
+        return self._transaction_store.count
