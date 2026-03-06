@@ -6,6 +6,11 @@ This file provides guidance to Claude Code when working with this repository.
 
 This project uses `uv` as the Python environment manager.
 
+## Git Workflow 
+
+When committing changes, always ask the user which files/directories to include before proposing commits. Never assume all unstaged/staged changes should be committed.
+
+
 ## Thoughts Directory
 
 This project uses a `.thoughts/` directory for persistent context:
@@ -33,10 +38,29 @@ This project uses a `.thoughts/` directory for persistent context:
 - The `.thoughts/` directory is gitignored
 - Use descriptive filenames: `YYYY-MM-DD-feature-name.md`
 
+### Development Pipeline
+
+See `.thoughts/PIPELINE.md` for the full workflow guide covering: Research → Design → Plan → Implement, with optional Structure and Tickets stages for complex work.
+
 ## Implementing Plans
 
 When implementing a plan from `.thoughts/plans/`, present intended changes for each phase before writing code. Pause between phases for manual verification. Update checkboxes in the plan file as items complete, and resume from the first unchecked item if checkboxes already exist.
 
 ## Development Conventions
 
-All code must pass `ty` and `ruff` checks.
+- Before implementing any changes, always: 1) Read the current version of each file you plan to modify, 2) Run the existing test suite to establish a baseline, 3) Implement changes incrementally — one logical unit at a time, 4) Run tests after each unit. If tests fail, fix before proceeding. Do not batch all changes and test at the end.
+- All code must pass `ty` and `ruff` checks.
+
+## Testing 
+
+After implementing changes, always run the full test suite before committing. If tests fail, fix them before presenting the commit plan. Tests commonly break due to: outdated fixture values, incorrect mock setup, and missing edge cases.
+
+
+## Communication Style
+
+When the user says 'looks good' or similar short affirmations during planning, proceed immediately with implementation. Do not elaborate further on the plan or ask for additional confirmation.
+
+
+## Debugging
+
+When the user reports a bug with a concrete example, reproduce the exact example first before proposing a fix. Do not assume you understand the issue until you've verified with the user's specific data.
