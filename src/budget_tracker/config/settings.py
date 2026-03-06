@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     default_date_format: str = "%d-%m-%Y"  # DD-MM-YYYY format
 
     category_mappings_file: Path = Path.home() / ".budget-tracker" / "category_mappings.yaml"
+    transactions_file: Path = Path.home() / ".budget-tracker" / "transactions.json"
 
     # CLI
     no_interactive: bool = False  # If True, disable interactive prompts
