@@ -41,6 +41,7 @@ def _make_settings(tmp_path: Path) -> Settings:
         categories_file=categories_file,
         default_categories_file=categories_file,
         category_mappings_file=tmp_path / "category_mappings.yaml",
+        transactions_file=tmp_path / "transactions.json",
     )
 
 
