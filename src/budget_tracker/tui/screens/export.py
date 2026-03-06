@@ -11,6 +11,7 @@ from textual.screen import Screen
 from textual.widgets import DataTable, Footer, LoadingIndicator, OptionList, Static
 from textual.widgets.option_list import Option
 
+from budget_tracker.tui.screens.home import HomeScreen
 from budget_tracker.tui.widgets.help_overlay import HelpOverlay
 
 if TYPE_CHECKING:
@@ -26,6 +27,7 @@ HELP_TEXT = """\
 
   [cyan]↑/↓[/cyan]     Select export format
   [cyan]Enter[/cyan]   Export in selected format
+  [cyan]H[/cyan]       Go to home screen
   [cyan]Escape[/cyan]  Go back
 
 [b]Formats[/b]
@@ -51,6 +53,7 @@ class ExportScreen(Screen):
         Binding("j", "vim_down", "Down", show=False),
         Binding("k", "vim_up", "Up", show=False),
         Binding("escape", "go_back", "Back"),
+        Binding("h", "go_home", "Home", key_display="H"),
         Binding("question_mark", "help", "Help", key_display="?"),
     ]
 
@@ -83,6 +86,12 @@ class ExportScreen(Screen):
 
     def _on_analytics_computed(self, result: AnalyticsResult) -> None:
         self.app.pipeline_state.analytics = result
+
+        # Auto-save categorized transactions to persistent store
+        count = self.app.service.save_transactions(self.app.pipeline_state.categorized_transactions)
+        if count > 0:
+            self.notify(f"{count} new transactions saved")
+
         self.query_one("#loading", LoadingIndicator).display = False
 
         # Render summary
@@ -172,6 +181,10 @@ class ExportScreen(Screen):
 
     def action_go_back(self) -> None:
         self.app.pop_screen()
+
+    def action_go_home(self) -> None:
+        while not isinstance(self.app.screen, HomeScreen):
+            self.app.pop_screen()
 
     def action_help(self) -> None:
         self.app.push_screen(HelpOverlay(HELP_TEXT))

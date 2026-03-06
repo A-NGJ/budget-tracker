@@ -81,6 +81,7 @@ def mock_service() -> MagicMock:
         source_data=[],
         period=_period,
     )
+    service.save_transactions.return_value = 0
     return service
 
 

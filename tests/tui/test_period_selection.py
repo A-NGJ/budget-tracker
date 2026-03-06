@@ -79,6 +79,7 @@ def mock_service() -> MagicMock:
     service.get_cached_category.return_value = None
     # ExportScreen dependencies (loaded after categorization finishes)
     service.compute_analytics.return_value = _STUB_ANALYTICS
+    service.save_transactions.return_value = 0
     return service
 
 

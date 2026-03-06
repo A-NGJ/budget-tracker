@@ -17,6 +17,7 @@ from budget_tracker.analytics.models import (
 from budget_tracker.services.budget_service import BudgetService
 from budget_tracker.tui.app import BudgetTrackerApp
 from budget_tracker.tui.screens.export import ExportScreen
+from budget_tracker.tui.screens.home import HomeScreen
 from budget_tracker.tui.screens.period_selection import PeriodSelectionScreen
 
 PERIOD = AnalyticsPeriod(from_date=None, to_date=None, label="All Time")
@@ -67,6 +68,7 @@ def mock_service() -> MagicMock:
     service.compute_analytics.return_value = ANALYTICS_RESULT
     service.export_excel.return_value = "/tmp/budget_2024.xlsx"
     service.export_csv.return_value = "/tmp/budget_2024.csv"
+    service.save_transactions.return_value = 0
     return service
 
 
@@ -151,6 +153,21 @@ async def test_format_selector_has_three_options(app: BudgetTrackerApp) -> None:
         assert format_list.option_count == 2
 
 
+# ── Transaction persistence tests ────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_save_transactions_called_on_analytics(
+    app: BudgetTrackerApp, mock_service: MagicMock
+) -> None:
+    async with app.run_test() as pilot:
+        await _push_export(app, pilot)
+
+        mock_service.save_transactions.assert_called_once_with(
+            app.pipeline_state.categorized_transactions
+        )
+
+
 # ── Export tests ─────────────────────────────────────────────
 
 
@@ -203,6 +220,19 @@ async def test_escape_goes_back(app: BudgetTrackerApp) -> None:
         await pilot.pause()
 
         assert not isinstance(app.screen, ExportScreen)
+
+
+@pytest.mark.asyncio
+async def test_h_navigates_to_home(app: BudgetTrackerApp) -> None:
+    async with app.run_test() as pilot:
+        await _push_export(app, pilot)
+
+        assert isinstance(app.screen, ExportScreen)
+
+        await pilot.press("h")
+        await pilot.pause()
+
+        assert isinstance(app.screen, HomeScreen)
 
 
 @pytest.mark.asyncio

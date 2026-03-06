@@ -14,6 +14,7 @@ from budget_tracker.models.bank_mapping import BankMapping
 from budget_tracker.models.transaction import StandardTransaction
 from budget_tracker.parsers.csv_parser import CSVParser
 from budget_tracker.services.category_cache import CategoryCache
+from budget_tracker.services.transaction_store import TransactionStore
 
 if TYPE_CHECKING:
     from datetime import date
@@ -40,6 +41,8 @@ class BudgetService:
         self._analytics_engine = AnalyticsEngine()
         self._category_cache = CategoryCache(settings)
         self._category_cache.load()
+        self._transaction_store = TransactionStore(settings.transactions_file)
+        self._transaction_store.load()
 
     # ── File operations ──────────────────────────────────────────────
 
@@ -204,3 +207,32 @@ class BudgetService:
             raise ValueError(msg)
         mapping.blacklist_keywords.remove(keyword)
         self.save_mapping(mapping)
+
+    # ── Transaction store ─────────────────────────────────────────────
+
+    def save_transactions(self, transactions: list[StandardTransaction]) -> int:
+        """Add transactions to store and persist. Returns count of new."""
+        count = self._transaction_store.add_many(transactions)
+        self._transaction_store.save()
+        return count
+
+    def load_all_transactions(self) -> list[StandardTransaction]:
+        """Return all stored transactions."""
+        return self._transaction_store.get_all()
+
+    def get_filtered_transactions(
+        self,
+        source: str | None = None,
+        category: str | None = None,
+        subcategory: str | None = None,
+        from_date: date | None = None,
+        to_date: date | None = None,
+    ) -> list[StandardTransaction]:
+        """Return filtered transactions from store."""
+        return self._transaction_store.get_filtered(
+            source=source,
+            category=category,
+            subcategory=subcategory,
+            from_date=from_date,
+            to_date=to_date,
+        )
