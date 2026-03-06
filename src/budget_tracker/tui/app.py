@@ -15,6 +15,7 @@ from budget_tracker.tui.screens.file_selection import FileSelectionScreen
 from budget_tracker.tui.screens.home import HomeScreen
 from budget_tracker.tui.screens.mappings import MappingsScreen
 from budget_tracker.tui.screens.period_selection import PeriodSelectionScreen
+from budget_tracker.tui.screens.stats import StatsScreen
 from budget_tracker.tui.screens.transfer_review import TransferReviewScreen
 from budget_tracker.tui.state import PipelineState
 
@@ -34,6 +35,7 @@ class BudgetTrackerApp(App[None]):
         "period_selection": PeriodSelectionScreen,
         "categorization": CategorizationScreen,
         "export": ExportScreen,
+        "stats": StatsScreen,
     }
 
     def __init__(self, service: BudgetService | None = None) -> None:

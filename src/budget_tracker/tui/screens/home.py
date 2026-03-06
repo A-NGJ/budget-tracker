@@ -22,6 +22,7 @@ HELP_TEXT = """\
 [b]Home Screen[/b]
 
   [cyan]P[/cyan]  Process bank statements
+  [cyan]S[/cyan]  Statistics
   [cyan]B[/cyan]  Manage blacklists
   [cyan]M[/cyan]  View saved mappings
   [cyan]C[/cyan]  Clear category cache
@@ -83,6 +84,7 @@ class HomeScreen(Screen):
 
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("p", "process", "Process statements", key_display="P"),
+        Binding("s", "stats", "Statistics", key_display="S"),
         Binding("b", "blacklists", "Manage blacklists", key_display="B"),
         Binding("m", "mappings", "View mappings", key_display="M"),
         Binding("c", "clear_cache", "Clear cache", key_display="C"),
@@ -94,6 +96,7 @@ class HomeScreen(Screen):
         yield Static("Budget Tracker", id="title")
         yield Static("")
         yield Static("  [bold cyan]\\[P][/]  Process bank statements", classes="menu-item")
+        yield Static("  [bold cyan]\\[S][/]  Statistics", classes="menu-item")
         yield Static("  [bold cyan]\\[B][/]  Manage blacklists", classes="menu-item")
         yield Static("  [bold cyan]\\[M][/]  View saved mappings", classes="menu-item")
         yield Static("  [bold cyan]\\[C][/]  Clear category cache", classes="menu-item")
@@ -102,6 +105,9 @@ class HomeScreen(Screen):
 
     def action_process(self) -> None:
         self.app.push_screen("file_selection")
+
+    def action_stats(self) -> None:
+        self.app.push_screen("stats")
 
     def action_blacklists(self) -> None:
         self.app.push_screen("blacklist")

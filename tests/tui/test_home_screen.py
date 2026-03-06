@@ -66,6 +66,12 @@ class TestHomeScreen:
             await pilot.press("escape")
             assert app.screen.__class__.__name__ == "HomeScreen"
 
+    async def test_stats_key_pushes_stats_screen(self, app: BudgetTrackerApp) -> None:
+        """Pressing S navigates to stats screen."""
+        async with app.run_test() as pilot:
+            await pilot.press("s")
+            assert app.screen.__class__.__name__ == "StatsScreen"
+
     async def test_pipeline_state_exists(self, app: BudgetTrackerApp) -> None:
         """App has a PipelineState instance."""
         async with app.run_test():
