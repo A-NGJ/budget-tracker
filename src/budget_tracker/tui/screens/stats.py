@@ -327,7 +327,31 @@ class StatsScreen(Screen):
             )
 
     def _update_sources(self, result: AnalyticsResult) -> None:
-        """Update sources tab — stub for stab-003."""
+        """Update sources tab with per-bank breakdown."""
+        table = self.query_one("#source-table", DataTable)
+        table.clear(columns=True)
+        table.add_columns("Source", "Income", "Expenses", "Count", "")
+
+        max_expenses = max((abs(r.total_expenses) for r in result.source_data), default=0)
+
+        for row in result.source_data:
+            income_text = f"[green]+{row.total_income:,.0f} DKK[/green]"
+            expenses_text = f"[red]{row.total_expenses:,.0f} DKK[/red]"
+
+            bar_len = (
+                int(abs(row.total_expenses) / max_expenses * MAX_BAR_WIDTH)
+                if max_expenses > 0
+                else 0
+            )
+            bar = "\u2588" * bar_len
+
+            table.add_row(
+                row.source,
+                income_text,
+                expenses_text,
+                str(row.transaction_count),
+                bar,
+            )
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         index = event.option_index
