@@ -35,11 +35,19 @@ StatsScreen #keyword-input {
     width: 1fr;
 }
 
-StatsScreen #analytics-panel {
+StatsScreen #stats-tabs {
     margin: 1 2;
     height: auto;
-    border: round $primary;
-    padding: 1 2;
+}
+
+StatsScreen #monthly-table {
+    height: auto;
+    max-height: 16;
+}
+
+StatsScreen #source-table {
+    height: auto;
+    max-height: 10;
 }
 
 StatsScreen #category-table {

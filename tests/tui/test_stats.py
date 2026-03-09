@@ -7,7 +7,7 @@ from decimal import Decimal
 from unittest.mock import MagicMock
 
 import pytest
-from textual.widgets import DataTable, Static
+from textual.widgets import DataTable, Static, TabbedContent
 
 from budget_tracker.analytics.models import (
     AnalyticsPeriod,
@@ -123,7 +123,7 @@ async def test_stats_screen_empty_state(mock_service: MagicMock) -> None:
         empty = screen.query_one("#empty-state", Static)
         assert empty.display is True
 
-        analytics_panel = screen.query_one("#analytics-panel")
+        analytics_panel = screen.query_one("#stats-tabs")
         assert analytics_panel.display is False
 
 
@@ -187,3 +187,40 @@ async def test_export_csv(app: BudgetTrackerApp, mock_service: MagicMock) -> Non
         result = app.screen.query_one("#export-result", Static)
         result_text = str(result._Static__content)  # type: ignore[attr-defined]
         assert "/tmp/stats_export.csv" in result_text
+
+
+@pytest.mark.asyncio
+async def test_tab_switching(app: BudgetTrackerApp) -> None:
+    async with app.run_test() as pilot:
+        await _push_stats(app, pilot)
+        screen = app.screen
+        assert isinstance(screen, StatsScreen)
+
+        tabs = screen.query_one("#stats-tabs", TabbedContent)
+        assert tabs.active == "tab-overview"
+
+        await pilot.press("2")
+        await pilot.pause()
+        assert tabs.active == "tab-monthly"
+
+        await pilot.press("3")
+        await pilot.pause()
+        assert tabs.active == "tab-sources"
+
+        await pilot.press("1")
+        await pilot.pause()
+        assert tabs.active == "tab-overview"
+
+
+@pytest.mark.asyncio
+async def test_monthly_and_sources_tabs_render(app: BudgetTrackerApp) -> None:
+    async with app.run_test() as pilot:
+        await _push_stats(app, pilot)
+        screen = app.screen
+        assert isinstance(screen, StatsScreen)
+
+        monthly = screen.query_one("#monthly-table", DataTable)
+        assert monthly.row_count == 0
+
+        source = screen.query_one("#source-table", DataTable)
+        assert source.row_count == 0

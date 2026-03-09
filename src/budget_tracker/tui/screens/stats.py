@@ -9,7 +9,16 @@ from textual import work
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
-from textual.widgets import DataTable, Footer, Input, OptionList, Select, Static
+from textual.widgets import (
+    DataTable,
+    Footer,
+    Input,
+    OptionList,
+    Select,
+    Static,
+    TabbedContent,
+    TabPane,
+)
 from textual.widgets.option_list import Option
 
 from budget_tracker.analytics.models import AnalyticsPeriod
@@ -26,6 +35,7 @@ if TYPE_CHECKING:
 HELP_TEXT = """\
 [b]Statistics[/b]
 
+  [cyan]1/2/3[/cyan]         Switch tabs
   [cyan]Tab/Shift+Tab[/cyan]  Cycle focus
   [cyan]↑/↓[/cyan]           Navigate options
   [cyan]E[/cyan]             Jump to export
@@ -104,6 +114,9 @@ class StatsScreen(Screen):
         Binding("escape", "go_back", "Back"),
         Binding("e", "focus_export", "Export", key_display="E"),
         Binding("question_mark", "help", "Help", key_display="?"),
+        Binding("1", "switch_tab('tab-overview')", "Overview", show=False),
+        Binding("2", "switch_tab('tab-monthly')", "Monthly", show=False),
+        Binding("3", "switch_tab('tab-sources')", "Sources", show=False),
     ]
 
     def compose(self) -> ComposeResult:
@@ -127,10 +140,15 @@ class StatsScreen(Screen):
                 yield Select[str]([], id="period-select", prompt="Period")
                 yield Input(placeholder="Keyword search...", id="keyword-input")
 
-        # Analytics panel
-        with Vertical(id="analytics-panel"):
-            yield Static("", id="summary")
-            yield DataTable(id="category-table")
+        # Tabbed analytics content
+        with TabbedContent(id="stats-tabs"):
+            with TabPane("Overview", id="tab-overview"):
+                yield Static("", id="summary")
+                yield DataTable(id="category-table")
+            with TabPane("Monthly", id="tab-monthly"):
+                yield DataTable(id="monthly-table")
+            with TabPane("Sources", id="tab-sources"):
+                yield DataTable(id="source-table")
 
         # Export section
         with Vertical(id="export-section"):
@@ -144,7 +162,7 @@ class StatsScreen(Screen):
         # Hide everything initially
         self.query_one("#empty-state").display = False
         self.query_one("#filter-bar").display = False
-        self.query_one("#analytics-panel").display = False
+        self.query_one("#stats-tabs").display = False
         self.query_one("#export-section").display = False
         self.query_one("#export-result").display = False
 
@@ -154,7 +172,7 @@ class StatsScreen(Screen):
 
         self._populate_filters()
         self.query_one("#filter-bar").display = True
-        self.query_one("#analytics-panel").display = True
+        self.query_one("#stats-tabs").display = True
         self.query_one("#export-section").display = True
 
         # Setup export format list
@@ -244,9 +262,11 @@ class StatsScreen(Screen):
         result = self.app.service.compute_analytics(filtered, period)
         self._filtered_transactions = filtered
         self._analytics_result = result
-        self._update_display(result, len(filtered))
+        self._update_overview(result, len(filtered))
+        self._update_monthly(result)
+        self._update_sources(result)
 
-    def _update_display(self, result: AnalyticsResult, count: int) -> None:
+    def _update_overview(self, result: AnalyticsResult, count: int) -> None:
         # Update title
         title = self.query_one("#title", Static)
         title.update(f"Statistics — {result.period.label} ({count:,} transactions)")
@@ -276,6 +296,12 @@ class StatsScreen(Screen):
                 f"{row.percentage:.1f}%",
                 bar,
             )
+
+    def _update_monthly(self, result: AnalyticsResult) -> None:
+        """Update monthly tab — stub for stab-002."""
+
+    def _update_sources(self, result: AnalyticsResult) -> None:
+        """Update sources tab — stub for stab-003."""
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         index = event.option_index
@@ -324,6 +350,9 @@ class StatsScreen(Screen):
 
     def action_focus_export(self) -> None:
         self.query_one("#format-list", OptionList).focus()
+
+    def action_switch_tab(self, tab_id: str) -> None:
+        self.query_one("#stats-tabs", TabbedContent).active = tab_id
 
     def action_help(self) -> None:
         self.app.push_screen(HelpOverlay(HELP_TEXT))
