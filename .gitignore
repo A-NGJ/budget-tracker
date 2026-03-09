@@ -210,8 +210,8 @@ __marimo__/
 
 data/
 
-# Claude Code local settings
-.claude/settings.local.json
+# Claude Code
+.claude/
 
-# Claude Code local settings
-.claude/thoughts/local/
+# RPI workflow
+.thoughts/
