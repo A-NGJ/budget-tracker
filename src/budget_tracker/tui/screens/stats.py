@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from textual.binding import BindingType
 
     from budget_tracker.analytics.models import AnalyticsResult
+    from budget_tracker.models.transaction import StandardTransaction
     from budget_tracker.tui.app import BudgetTrackerApp
 
 
@@ -54,6 +55,7 @@ HELP_TEXT = """\
 """
 
 MAX_BAR_WIDTH = 20
+MAX_TXN_ROWS = 50
 
 EXPORT_FORMATS = [
     ("Excel (.xlsx)", "excel"),
@@ -114,9 +116,9 @@ class StatsScreen(Screen):
         Binding("escape", "go_back", "Back"),
         Binding("e", "focus_export", "Export", key_display="E"),
         Binding("question_mark", "help", "Help", key_display="?"),
-        Binding("1", "switch_tab('tab-overview')", "Overview", show=False),
-        Binding("2", "switch_tab('tab-monthly')", "Monthly", show=False),
-        Binding("3", "switch_tab('tab-sources')", "Sources", show=False),
+        Binding("1", "switch_tab('tab-overview')", "Overview", key_display="1"),
+        Binding("2", "switch_tab('tab-monthly')", "Monthly", key_display="2"),
+        Binding("3", "switch_tab('tab-sources')", "Sources", key_display="3"),
     ]
 
     def compose(self) -> ComposeResult:
@@ -145,6 +147,8 @@ class StatsScreen(Screen):
             with TabPane("Overview", id="tab-overview"):
                 yield Static("", id="summary")
                 yield DataTable(id="category-table")
+                yield Static("", id="txn-list-header")
+                yield DataTable(id="transaction-list")
             with TabPane("Monthly", id="tab-monthly"):
                 yield DataTable(id="monthly-table")
             with TabPane("Sources", id="tab-sources"):
@@ -296,6 +300,35 @@ class StatsScreen(Screen):
                 f"{row.percentage:.1f}%",
                 bar,
             )
+
+        # Show all filtered transactions initially
+        self._update_transaction_list("All", self._filtered_transactions)
+
+    def _update_transaction_list(
+        self, header: str, transactions: list[StandardTransaction]
+    ) -> None:
+        """Update the transaction list panel."""
+        total = len(transactions)
+        display = transactions[:MAX_TXN_ROWS]
+
+        header_widget = self.query_one("#txn-list-header", Static)
+        header_text = f"[bold]Transactions: {header} ({total})[/bold]"
+        if total > MAX_TXN_ROWS:
+            header_text += f"  [dim]Showing {MAX_TXN_ROWS} of {total} transactions[/dim]"
+        header_widget.update(header_text)
+
+        table = self.query_one("#transaction-list", DataTable)
+        table.clear(columns=True)
+        table.add_columns("Date", "Description", "Amount", "Category", "Source")
+
+        for t in display:
+            date_text = t.date.strftime("%m-%d")
+            desc = (t.description or "")[:40]
+            amt_style = "green" if t.amount >= 0 else "red"
+            sign = "+" if t.amount >= 0 else ""
+            amount_text = f"[{amt_style}]{sign}{t.amount:,.0f} DKK[/{amt_style}]"
+            source = t.source or ""
+            table.add_row(date_text, desc, amount_text, t.category, source)
 
     def _update_monthly(self, result: AnalyticsResult) -> None:
         """Update monthly tab with income/expenses/net per month."""

@@ -56,6 +56,16 @@ StatsScreen #category-table {
     max-height: 16;
 }
 
+StatsScreen #txn-list-header {
+    text-style: bold;
+    margin-top: 1;
+}
+
+StatsScreen #transaction-list {
+    height: auto;
+    max-height: 10;
+}
+
 StatsScreen #export-section {
     margin: 1 2;
     height: auto;
