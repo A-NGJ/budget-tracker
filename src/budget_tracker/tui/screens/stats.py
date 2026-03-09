@@ -298,7 +298,33 @@ class StatsScreen(Screen):
             )
 
     def _update_monthly(self, result: AnalyticsResult) -> None:
-        """Update monthly tab — stub for stab-002."""
+        """Update monthly tab with income/expenses/net per month."""
+        table = self.query_one("#monthly-table", DataTable)
+        table.clear(columns=True)
+        table.add_columns("Month", "Income", "Expenses", "Net", "Count", "")
+
+        rows = list(reversed(result.monthly_data))
+        max_expenses = max((abs(r.expenses) for r in rows), default=0)
+
+        for row in rows:
+            income_text = f"[green]+{row.income:,.0f} DKK[/green]"
+            expenses_text = f"[red]{row.expenses:,.0f} DKK[/red]"
+            net_style = "green" if row.net >= 0 else "red"
+            net_text = f"[{net_style}]{row.net:,.0f} DKK[/{net_style}]"
+
+            bar_len = (
+                int(abs(row.expenses) / max_expenses * MAX_BAR_WIDTH) if max_expenses > 0 else 0
+            )
+            bar = "\u2588" * bar_len
+
+            table.add_row(
+                row.label,
+                income_text,
+                expenses_text,
+                net_text,
+                str(row.transaction_count),
+                bar,
+            )
 
     def _update_sources(self, result: AnalyticsResult) -> None:
         """Update sources tab — stub for stab-003."""
