@@ -68,9 +68,7 @@ class ExcelExporter:
         green = workbook.add_format(
             {"num_format": "#,##0.00", "font_color": "#008000", "bold": True}
         )
-        red = workbook.add_format(
-            {"num_format": "#,##0.00", "font_color": "#FF0000", "bold": True}
-        )
+        red = workbook.add_format({"num_format": "#,##0.00", "font_color": "#FF0000", "bold": True})
         title = workbook.add_format({"bold": True, "font_size": 14})
         label = workbook.add_format({"bold": True})
         return {
