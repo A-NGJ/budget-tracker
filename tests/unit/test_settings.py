@@ -3,11 +3,13 @@
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from budget_tracker.config.settings import Settings, _maybe_migrate_data_dir
 
 
 class TestSettingsDefaults:
-    def test_default_dir_has_no_dot(self, monkeypatch) -> None:
+    def test_default_dir_has_no_dot(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Default data paths use ~/budget-tracker (no leading dot)."""
         monkeypatch.delenv("BUDGET_TRACKER_TRANSACTIONS_FILE", raising=False)
         monkeypatch.delenv("BUDGET_TRACKER_CATEGORIES_FILE", raising=False)
@@ -19,7 +21,7 @@ class TestSettingsDefaults:
         assert not str(s.category_mappings_file).endswith(".budget-tracker/category_mappings.yaml")
         assert not str(s.banks_dir).endswith(".budget-tracker/banks")
 
-    def test_default_dir_uses_budget_tracker(self, monkeypatch) -> None:
+    def test_default_dir_uses_budget_tracker(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Default data paths resolve under ~/budget-tracker."""
         monkeypatch.delenv("BUDGET_TRACKER_TRANSACTIONS_FILE", raising=False)
         monkeypatch.delenv("BUDGET_TRACKER_CATEGORIES_FILE", raising=False)
