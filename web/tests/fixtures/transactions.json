@@ -1,0 +1,34 @@
+[
+  {
+    "date": "2024-01-15",
+    "category": "Food & Drinks",
+    "subcategory": "Groceries",
+    "amount": "-150.00",
+    "source": "bank_a",
+    "description": "NETTO GROCERY"
+  },
+  {
+    "date": "2024-02-10",
+    "category": "Food & Drinks",
+    "subcategory": "Restaurants",
+    "amount": "-300.00",
+    "source": "bank_a",
+    "description": "FANCY RESTAURANT"
+  },
+  {
+    "date": "2024-01-20",
+    "category": "Transportation",
+    "subcategory": "Public Transport",
+    "amount": "-50.00",
+    "source": "bank_b",
+    "description": "METRO CARD"
+  },
+  {
+    "date": "2024-01-31",
+    "category": "Income",
+    "subcategory": "Salary",
+    "amount": "5000.00",
+    "source": "bank_a",
+    "description": "MONTHLY SALARY"
+  }
+]
