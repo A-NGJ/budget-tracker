@@ -20,6 +20,7 @@ dependencies = [
     "textual>=1.0.0",
     "textual-autocomplete>=4.0.0",
     "fastapi>=0.137.1",
+    "uvicorn>=0.30.0",
 ]
 
 [dependency-groups]
