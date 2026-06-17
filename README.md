@@ -1,11 +1,11 @@
 # Budget Tracker
 
-A CLI tool to standardize bank statements and categorize transactions using a local LLM.
+A TUI tool to standardize bank statements and categorize transactions interactively.
 
 ## Features
 
 - Process CSV bank statements from multiple banks
-- Automatic transaction categorization using Ollama (local LLM)
+- Interactive transaction categorization in the TUI, with cached suggestions for descriptions you've categorized before
 - Interactive column mapping for new bank formats
 - Currency conversion to DKK
 - Export to standardized CSV format
@@ -13,7 +13,6 @@ A CLI tool to standardize bank statements and categorize transactions using a lo
 ## Requirements
 
 - Python 3.12+
-- [Ollama](https://ollama.ai/) running locally
 
 ## Installation
 
@@ -132,9 +131,9 @@ The app creates the target directory automatically on first run.
 ## How It Works
 
 1. **Parse** - Reads CSV files and maps columns to standard fields (date, amount, description)
-2. **Categorize** - Uses Ollama to categorize each transaction
+2. **Categorize** - Assign a category to each transaction in the TUI; previously categorized descriptions are applied automatically from the cache
 3. **Convert** - Converts amounts to DKK
-4. **Confirm** - Prompts for review of uncertain categorizations
+4. **Review** - Lets you review and adjust assignments before export
 5. **Export** - Outputs standardized CSV
 
 ## Development
@@ -160,12 +159,13 @@ ruff format --check
 
 ```
 src/budget_tracker/
-├── cli/           # Command-line interface
-├── categorizer/   # LLM categorization
+├── analytics/     # Spending analysis
 ├── config/        # Settings and configuration
 ├── currency/      # Currency conversion
 ├── exporters/     # Output formatters
+├── filters/       # Transaction filtering
 ├── models/        # Data models
 ├── parsers/       # CSV parsing
-└── utils/         # Utilities
+├── services/      # Categorization, storage, budgets
+└── tui/           # Terminal UI (categorization, review, export)
 ```
