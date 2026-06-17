@@ -215,3 +215,8 @@ data/
 
 # RPI workflow
 .thoughts/
+.rpi/
+.rpiv/
+
+# Goal definitions
+goals/
