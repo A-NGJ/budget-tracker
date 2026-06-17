@@ -18,15 +18,15 @@ class Settings(BaseSettings):
     data_dir: Path = Path.cwd() / "data"
     output_dir: Path = Path.cwd() / "data" / "output"
 
-    categories_file: Path = Path.home() / ".budget-tracker" / "categories.yaml"
+    categories_file: Path = Path.home() / "budget-tracker" / "categories.yaml"
     default_categories_file: Path = Path.cwd() / "config" / "categories.yaml"
-    banks_dir: Path = Path.home() / ".budget-tracker" / "banks"
+    banks_dir: Path = Path.home() / "budget-tracker" / "banks"
 
     default_output_filename: str = "standardized_transactions.xlsx"
     default_date_format: str = "%d-%m-%Y"  # DD-MM-YYYY format
 
-    category_mappings_file: Path = Path.home() / ".budget-tracker" / "category_mappings.yaml"
-    transactions_file: Path = Path.home() / ".budget-tracker" / "transactions.json"
+    category_mappings_file: Path = Path.home() / "budget-tracker" / "category_mappings.yaml"
+    transactions_file: Path = Path.home() / "budget-tracker" / "transactions.json"
 
     # CLI
     no_interactive: bool = False  # If True, disable interactive prompts
@@ -52,8 +52,24 @@ class Settings(BaseSettings):
         self.ensure_banks_dir()
 
 
+def _maybe_migrate_data_dir() -> None:
+    """Silently move ~/.budget-tracker to ~/budget-tracker on first run after upgrade."""
+    old = Path.home() / ".budget-tracker"
+    new = Path.home() / "budget-tracker"
+    if old.exists() and not new.exists():
+        try:
+            shutil.move(str(old), str(new))
+        except (OSError, shutil.Error) as e:
+            msg = (
+                f"Cannot migrate data from {old} to {new}: {e}. "
+                "Please move the directory manually and try again."
+            )
+            raise RuntimeError(msg) from e
+
+
 @cache
 def get_settings() -> Settings:
     """Get cached settings instance."""
     settings = Settings()
+    _maybe_migrate_data_dir()
     return settings

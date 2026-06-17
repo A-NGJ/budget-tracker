@@ -30,7 +30,20 @@ class TransactionStore:
         if not self._file_path.exists():
             return
 
-        raw = json.loads(self._file_path.read_text())
+        try:
+            text = self._file_path.read_text()
+        except OSError as e:
+            msg = (
+                f"Cannot read {self._file_path} \u2014 the file may have been evicted by iCloud. "
+                "Open Finder and wait for it to download, then try again."
+            )
+            raise RuntimeError(msg) from e
+
+        try:
+            raw = json.loads(text)
+        except (json.JSONDecodeError, ValueError):
+            return
+
         if not isinstance(raw, list):
             return
 

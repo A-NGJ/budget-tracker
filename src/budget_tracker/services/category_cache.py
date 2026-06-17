@@ -22,7 +22,20 @@ class CategoryCache:
         if not mappings_file.exists():
             return
 
-        raw = yaml.safe_load(mappings_file.read_text())
+        try:
+            text = mappings_file.read_text()
+        except OSError as e:
+            msg = (
+                f"Cannot read {mappings_file} \u2014 the file may have been evicted by iCloud. "
+                "Open Finder and wait for it to download, then try again."
+            )
+            raise RuntimeError(msg) from e
+
+        try:
+            raw = yaml.safe_load(text)
+        except yaml.YAMLError:
+            return
+
         if not isinstance(raw, dict):
             return
 
