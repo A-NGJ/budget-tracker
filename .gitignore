@@ -214,9 +214,7 @@ data/
 .claude/
 
 # RPI workflow
-.thoughts/
-.rpi/
-.rpiv/
+.rpi/archive/
 
 # Goal definitions
 goals/
