@@ -67,4 +67,16 @@ When the user says 'looks good' or similar short affirmations during planning, p
 
 When the user reports a bug with a concrete example, reproduce the exact example first before proposing a fix. Do not assume you understand the issue until you've verified with the user's specific data.
 
+## Agent skills
 
+### Issue tracker
+
+Issues are tracked in GitHub Issues using `gh`. See `docs/agents/issue-tracker.md`.
+
+### Labels
+
+Use the five triage labels plus `bug`, `enhancement`, and `decision` categories. See `docs/agents/labels.md`.
+
+### Domain docs
+
+Single-context (`CONTEXT.md` and `docs/adr/` at root). See `docs/agents/domain.md`.
