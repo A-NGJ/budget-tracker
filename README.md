@@ -157,13 +157,13 @@ ruff format --check
 
 ### Encrypted web workspace
 
-The web app in `web/` signs in with Google and stores accounts encrypted in Firestore (see `docs/adr/0003-workspace-encryption-format.md`). Development runs against the Firebase emulators under the `demo-budget-tracker` project. It needs Java 21+ (the minimum for the pinned `firebase-tools`) and no production project or billing.
+The web app in `web/` signs in with Google and stores accounts encrypted in Firestore (see `docs/adr/0003-workspace-encryption-format.md`). It imports Danske Bank netbank CSV statements: files are parsed and previewed in the browser, each file is assigned to an account, and only a confirmed import is encrypted and saved, together with the original file. The original can be downloaded or deleted later without removing its transactions. Development runs against the Firebase emulators under the `demo-budget-tracker` project. It needs Java 21+ (the minimum for the pinned `firebase-tools`) and no production project or billing.
 
 ```bash
 cd web
 npm install
 npm run dev:emulators   # Auth + Firestore emulators and Vite in emulator mode
-npm test                # unit tests (encryption format, inactivity, accounts)
+npm test                # unit tests (encryption format, inactivity, accounts, statement parsing)
 npm run test:rules      # Firestore security rules against the emulator
 npm run test:workspace  # end-to-end in Chromium, Firefox and WebKit against the emulators
 BRANDED_BROWSERS=chrome,msedge npm run test:workspace  # also installed Google Chrome and Microsoft Edge
