@@ -13,7 +13,9 @@ on:
       - "firestore.indexes.json"
       - ".github/workflows/web-workspace.yml"
   push:
-    branches: [main]
+    # The issue branch is listed so its first push runs the full browser
+    # suite before the pull request opens.
+    branches: [main, feature/1-encrypted-account-workspace]
     paths:
       - "web/**"
       - "firebase.json"
