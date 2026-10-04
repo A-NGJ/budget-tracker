@@ -43,13 +43,18 @@ test("the whole flow works from the keyboard", async ({ page, browserName }) => 
   await page.keyboard.type("Everyday");
   await page.keyboard.press(tab);
   await page.keyboard.type("Danske Bank");
-  // Safari shows the bank suggestion list while typing; its first Enter accepts
-  // the suggestion (native behaviour), so WebKit needs one more Enter to submit.
+  // Bank and Currency offer suggestion lists. What Enter does inside such a
+  // field is engine-specific: macOS WebKit's first Enter accepts the
+  // suggestion, and Linux WebKit never submits the form from it. So the test
+  // tabs to "Save account" and presses Enter there, the same keyboard path in
+  // every engine. (Implicit Enter submission is covered by onboarding above.)
+  const save = dialog.getByRole("button", { name: "Save account" });
+  for (let i = 0; i < 6 && !(await save.evaluate((element) => element === document.activeElement)); i++) await page.keyboard.press(tab);
+  await expect(save).toBeFocused();
+  await expect(dialog.getByLabel("Account name")).toHaveValue("Everyday");
+  await expect(dialog.getByLabel("Bank")).toHaveValue("Danske Bank");
+  await expect(dialog.getByLabel("Currency")).toHaveValue("DKK");
   await page.keyboard.press("Enter");
-  if (browserName === "webkit") {
-    await expect(dialog.getByLabel("Bank")).toHaveValue("Danske Bank");
-    if (await dialog.isVisible()) await page.keyboard.press("Enter");
-  }
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("list", { name: "Accounts" }).getByText("Everyday")).toBeVisible();
   await expect(addAccount).toBeFocused();
