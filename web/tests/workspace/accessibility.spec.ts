@@ -14,34 +14,42 @@ async function expectNoAxeViolations(page: Page) {
 }
 
 test("the whole flow works from the keyboard", async ({ page, browserName }) => {
-  // WebKit only moves Tab focus to links when the platform setting allows it,
-  // so the keyboard-only part uses Chromium and Firefox.
-  test.skip(browserName === "webkit", "WebKit tab order depends on the OS keyboard-navigation setting");
+  // On macOS, Safari's default keyboard setting moves Tab between form
+  // controls only; Option-Tab reaches every item, links included. Playwright's
+  // WebKit follows the same platform rule there, so it walks the page with
+  // Option-Tab (Alt+Tab). Linux WebKit tabs to links by default.
+  const tab = browserName === "webkit" && process.platform === "darwin" ? "Alt+Tab" : "Tab";
   await page.goto("/");
   await signInWithGoogle(page, "operator@example.com");
 
   // Onboarding: the passphrase field is focused, Enter submits.
   await expect(page.getByLabel("Unlock passphrase")).toBeFocused();
   await page.keyboard.type(PASSPHRASE);
-  await page.keyboard.press("Tab");
+  await page.keyboard.press(tab);
   await page.keyboard.type(PASSPHRASE);
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Your month, at a glance" })).toBeVisible();
 
   // Skip link, then reach "Add account" by tabbing.
-  await page.keyboard.press("Tab");
+  await page.keyboard.press(tab);
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   const addAccount = page.getByRole("button", { name: "Add account" });
-  for (let i = 0; i < 20 && !(await addAccount.evaluate((element) => element === document.activeElement)); i++) await page.keyboard.press("Tab");
+  for (let i = 0; i < 20 && !(await addAccount.evaluate((element) => element === document.activeElement)); i++) await page.keyboard.press(tab);
   await expect(addAccount).toBeFocused();
   await page.keyboard.press("Enter");
 
   const dialog = page.getByRole("dialog", { name: "Add an account" });
   await expect(dialog.getByLabel("Account name")).toBeFocused();
   await page.keyboard.type("Everyday");
-  await page.keyboard.press("Tab");
+  await page.keyboard.press(tab);
   await page.keyboard.type("Danske Bank");
+  // Safari shows the bank suggestion list while typing; its first Enter accepts
+  // the suggestion (native behaviour), so WebKit needs one more Enter to submit.
   await page.keyboard.press("Enter");
+  if (browserName === "webkit") {
+    await expect(dialog.getByLabel("Bank")).toHaveValue("Danske Bank");
+    if (await dialog.isVisible()) await page.keyboard.press("Enter");
+  }
   await expect(dialog).toBeHidden();
   await expect(page.getByRole("list", { name: "Accounts" }).getByText("Everyday")).toBeVisible();
   await expect(addAccount).toBeFocused();

@@ -15,9 +15,15 @@ export async function signInWithGoogle(page: Page, email: string) {
   const popupPromise = page.waitForEvent("popup");
   await page.getByRole("button", { name: "Sign in with Google" }).click();
   const popup = await popupPromise;
-  await popup.waitForLoadState("domcontentloaded");
-  await popup.locator(".js-new-account").click();
-  await popup.locator("#email-input").fill(email);
+  // The emulator widget attaches its click handlers in a script that can run
+  // after DOMContentLoaded, so wait for load and retry until the form opens.
+  await popup.waitForLoadState("load");
+  const emailInput = popup.locator("#email-input");
+  await expect(async () => {
+    await popup.locator(".js-new-account").click();
+    await expect(emailInput).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+  await emailInput.fill(email);
   await popup.locator("#display-name-input").fill("Test Operator");
   await popup.locator("#sign-in").click();
   await popup.waitForEvent("close");
