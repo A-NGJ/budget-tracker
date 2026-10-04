@@ -155,6 +155,21 @@ ruff check
 ruff format --check
 ```
 
+### Encrypted web workspace
+
+The web app in `web/` signs in with Google and stores accounts encrypted in Firestore (see `docs/adr/0003-workspace-encryption-format.md`). Development runs against the Firebase emulators under the `demo-budget-tracker` project. It needs Java 11+ and no production project or billing.
+
+```bash
+cd web
+npm install
+npm run dev:emulators   # Auth + Firestore emulators and Vite in emulator mode
+npm test                # unit tests (encryption format, inactivity, accounts)
+npm run test:rules      # Firestore security rules against the emulator
+npm run test:workspace  # end-to-end in Chromium, Firefox and WebKit against the emulators
+```
+
+The legacy stats dashboard is served at `/stats.html` by the FastAPI app (`npm run test:e2e`).
+
 ## Project Structure
 
 ```
