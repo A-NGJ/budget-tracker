@@ -1,0 +1,31 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json",
+    "location": "eur3"
+  },
+  "hosting": {
+    "public": "web/dist",
+    "ignore": ["firebase.json", "**/.*", "stats.html", "assets/stats-*"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          { "key": "X-Content-Type-Options", "value": "nosniff" },
+          { "key": "Referrer-Policy", "value": "no-referrer" },
+          { "key": "X-Frame-Options", "value": "DENY" },
+          { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" }
+        ]
+      }
+    ]
+  },
+  "emulators": {
+    "singleProjectMode": true,
+    "auth": { "host": "127.0.0.1", "port": 9099 },
+    "firestore": { "host": "127.0.0.1", "port": 8080 },
+    "hub": { "host": "127.0.0.1", "port": 4400 },
+    "logging": { "host": "127.0.0.1", "port": 4500 },
+    "ui": { "enabled": true, "host": "127.0.0.1", "port": 4000 }
+  }
+}

@@ -218,3 +218,9 @@ data/
 
 # Goal definitions
 goals/
+
+# Firebase
+.firebase/
+*-debug.log
+web/.env.local
+web/.env.*.local
