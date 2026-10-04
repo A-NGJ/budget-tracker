@@ -1,0 +1,67 @@
+rules_version = '2';
+
+// Ownership boundary for the encrypted workspace (ADR-0001, ADR-0002).
+// Each Google account may read and write only `workspaces/{its uid}` and the
+// encrypted records beneath it. Everything else is denied, so the UI hiding a
+// workspace is never the only protection. Documents hold ciphertext; the shape
+// checks below stop plaintext fields from being stored by mistake.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function owns(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function validSlot(slot) {
+      return slot.keys().hasOnly(['kdf', 'iterations', 'salt', 'iv', 'wrappedKey'])
+        && slot.kdf == 'PBKDF2-SHA256'
+        && slot.iterations is int && slot.iterations >= 100000
+        && slot.salt is bytes && slot.iv is bytes && slot.wrappedKey is bytes;
+    }
+
+    function validHeader(data) {
+      return data.keys().hasOnly(['formatVersion', 'cipher', 'keyId', 'keySlots', 'createdAt'])
+        && data.formatVersion == 1
+        && data.cipher == 'AES-256-GCM'
+        && data.keyId is string && data.keyId.size() == 32
+        && data.keySlots is map
+        && data.keySlots.keys().hasOnly(['passphrase', 'recovery'])
+        && 'passphrase' in data.keySlots && validSlot(data.keySlots.passphrase)
+        && (!('recovery' in data.keySlots) || validSlot(data.keySlots.recovery))
+        && data.createdAt is timestamp;
+    }
+
+    function validEnvelope(data) {
+      return data.keys().hasOnly(['formatVersion', 'keyId', 'iv', 'ciphertext', 'updatedAt'])
+        && data.formatVersion == 1
+        && data.keyId is string && data.keyId.size() == 32
+        && data.iv is bytes && data.ciphertext is bytes
+        && data.ciphertext.size() < 900000
+        && data.updatedAt == request.time;
+    }
+
+    match /workspaces/{uid} {
+      allow get: if owns(uid);
+      // Created once at onboarding. Header changes (credential change,
+      // recovery key) arrive with issue #15 and must keep the key id.
+      allow create: if owns(uid) && validHeader(request.resource.data);
+      allow update, delete, list: if false;
+
+      match /accounts/{accountId} {
+        allow read: if owns(uid);
+        allow create, update: if owns(uid)
+          && exists(/databases/$(database)/documents/workspaces/$(uid))
+          && validEnvelope(request.resource.data)
+          && request.resource.data.keyId == get(/databases/$(database)/documents/workspaces/$(uid)).data.keyId;
+        allow delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
