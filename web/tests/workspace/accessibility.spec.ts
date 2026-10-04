@@ -63,7 +63,8 @@ test("the whole flow works from the keyboard", async ({ page, browserName }) => 
   const importButton = page.getByRole("banner").getByRole("button", { name: "Import statements" });
   await importButton.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("dialog", { name: "Statement import is coming next" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Import bank statements" })).toBeVisible();
+  await expect(page.getByLabel("Choose statement files")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(importButton).toBeFocused();
@@ -149,3 +150,29 @@ for (const colorScheme of ["light", "dark"] as const) {
     await expectNoAxeViolations(page);
   });
 }
+
+test("statement preview and ledger have no accessibility violations", async ({ page }) => {
+  await page.goto("/");
+  await signInWithGoogle(page, "operator@example.com");
+  await page.getByLabel("Unlock passphrase").fill(PASSPHRASE);
+  await page.getByLabel("Repeat passphrase").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Create encrypted workspace" }).click();
+  await page.getByRole("banner").getByRole("button", { name: "Import statements" }).click();
+  await expectNoAxeViolations(page);
+  await page
+    .getByLabel("Choose statement files")
+    .setInputFiles([
+      { name: "konto.csv", mimeType: "text/csv", buffer: Buffer.from("Dato;Beløb;Tekst\n01.09.2026;-1.234,50;Husleje\n") },
+      { name: "other.csv", mimeType: "text/csv", buffer: Buffer.from("Date,Amount\n2026-09-01,1\n") },
+    ]);
+  const preview = page.getByRole("dialog", { name: "Check before importing" });
+  await expect(preview.getByRole("region", { name: "konto.csv" })).toBeVisible();
+  await expectNoAxeViolations(page);
+  await preview.getByLabel("Account for this file").selectOption({ label: "New account…" });
+  await preview.getByLabel("Account name").fill("Everyday");
+  await expectNoAxeViolations(page);
+  await preview.getByRole("button", { name: "Use this account" }).click();
+  await preview.getByRole("button", { name: "Import statement" }).click();
+  await expect(page.getByRole("table", { name: "Transactions" })).toBeVisible();
+  await expectNoAxeViolations(page);
+});

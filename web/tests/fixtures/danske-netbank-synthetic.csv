@@ -1,0 +1,6 @@
+"Dato";"Kategori";"Underkategori";"Tekst";"Beløb";"Saldo";"Status";"Afstemt"
+"01.09.2026";"Indtægt                       ";"Løn";"Løn fra Eksempel ApS";"32.500,00";"32.500,00";"Udført";"Nej"
+"02.09.2026";"Bolig                         ";"Husleje";"Husleje september";"-7.800,00";"24.700,00";"Udført";"Nej"
+"05.09.2026";"Mad og drikke                 ";"Dagligvarer";"Købmand Ærø";"-418,50";"24.281,50";"Udført";"Nej"
+"09.09.2026";"Opsparing                     ";"Overførsel";"Til opsparing";"-4.000,00";"20.281,50";"Udført";"Nej"
+"16.09.2026";"Shopping                      ";"Tøj";"Retur af køb";"350,00";"20.631,50";"Udført";"Nej"
