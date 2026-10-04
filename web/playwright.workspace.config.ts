@@ -4,6 +4,10 @@ import { defineConfig, devices } from "@playwright/test";
 // The `demo-` project id keeps the Firebase CLI and SDK off real projects, so
 // these runs need no credentials and cannot incur billing.
 const APP_PORT = 5180;
+const brandedChannels = (process.env.BRANDED_BROWSERS ?? "")
+  .split(",")
+  .map((channel) => channel.trim())
+  .filter((channel) => channel === "chrome" || channel === "msedge");
 
 export default defineConfig({
   testDir: "./tests/workspace",
@@ -17,12 +21,16 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${APP_PORT}`,
     trace: "retain-on-failure",
   },
-  // Edge shares Chromium's engine; Playwright's Chromium build stands in for
-  // both Chrome and Edge. Firefox and WebKit (Safari's engine) run as-is.
+  // Engine projects always run: Playwright's Chromium, Firefox and WebKit
+  // (Safari's engine) builds. BRANDED_BROWSERS adds the installed Google Chrome
+  // and Microsoft Edge (comma-separated channels, e.g. "chrome,msedge"); CI
+  // sets both. Branded Safari cannot be driven by Playwright, so WebKit is the
+  // Safari check.
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
+    ...brandedChannels.map((channel) => ({ name: channel, use: { ...devices[channel === "msedge" ? "Desktop Edge" : "Desktop Chrome"], channel } })),
   ],
   webServer: [
     {
