@@ -20,15 +20,21 @@ export function watchInactivity({ timeoutMs = INACTIVITY_LOCK_MS, onIdle, target
   let lastActivity = now();
   let stopped = false;
 
-  const markActive = () => {
-    lastActivity = now();
-  };
-  const check = () => {
-    if (stopped) return;
+  // Returns true when the deadline has passed and the workspace was locked.
+  const check = (): boolean => {
+    if (stopped) return true;
     if (now() - lastActivity >= timeoutMs) {
       stop();
       onIdle();
+      return true;
     }
+    return false;
+  };
+  // Input arriving after the deadline (e.g. a throttled tab whose interval
+  // never fired) must lock, not silently extend the session.
+  const markActive = () => {
+    if (check()) return;
+    lastActivity = now();
   };
   const onVisibility = () => {
     if (target.document.visibilityState === "visible") check();
