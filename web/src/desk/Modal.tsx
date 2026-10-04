@@ -7,13 +7,15 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   labelledBy?: string;
+  /** Wider layout for dialogs that show tables. */
+  wide?: boolean;
 }
 
 /**
  * Native modal dialog: the browser supplies focus containment, Escape to
  * close and inert background content in all supported desktop browsers.
  */
-export function Modal({ title, eyebrow, onClose, children }: ModalProps) {
+export function Modal({ title, eyebrow, onClose, children, wide }: ModalProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<Element | null>(null);
   useEffect(() => {
@@ -31,7 +33,7 @@ export function Modal({ title, eyebrow, onClose, children }: ModalProps) {
   return (
     <dialog
       ref={dialog}
-      className="dk-dialog"
+      className={wide ? "dk-dialog dk-dialog-wide" : "dk-dialog"}
       aria-labelledby="dk-dialog-title"
       onCancel={(event) => {
         event.preventDefault();
