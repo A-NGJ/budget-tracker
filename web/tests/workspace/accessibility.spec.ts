@@ -82,6 +82,40 @@ test("primary navigation has honest empty states and import on every page", asyn
   }
 });
 
+test("skip link moves focus to the content without changing the destination", async ({ page }) => {
+  await page.goto("/");
+  await signInWithGoogle(page, "operator@example.com");
+  await page.getByLabel("Unlock passphrase").fill(PASSPHRASE);
+  await page.getByLabel("Repeat passphrase").fill(PASSPHRASE);
+  await page.getByRole("button", { name: "Create encrypted workspace" }).click();
+  await expect(page.getByRole("heading", { name: "Your month, at a glance" })).toBeVisible();
+
+  const navigation = page.getByRole("navigation", { name: "Main navigation" });
+  const skip = page.getByRole("link", { name: "Skip to content" });
+  const pages = [
+    ["Overview", "Your month, at a glance", "#/overview"],
+    ["Transactions", "No transactions yet", "#/transactions"],
+    ["Inbox", "Nothing to review", "#/inbox"],
+    ["Recurring", "No recurring costs yet", "#/recurring"],
+  ] as const;
+  for (const [item, heading, hash] of pages) {
+    await navigation.getByRole("button", { name: item }).click();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const before = new URL(page.url()).hash;
+    await skip.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("main#dk-main")).toBeFocused();
+    await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+    await expect(navigation.getByRole("button", { name: item })).toHaveAttribute("aria-current", "page");
+    expect(new URL(page.url()).hash).toBe(before);
+    if (item !== "Overview") expect(before).toBe(hash);
+    // A second activation is still a no-op for routing.
+    await skip.focus();
+    await page.keyboard.press("Enter");
+    await expect(navigation.getByRole("button", { name: item })).toHaveAttribute("aria-current", "page");
+  }
+});
+
 for (const colorScheme of ["light", "dark"] as const) {
   test(`follows the system ${colorScheme} colour scheme without accessibility violations`, async ({ page }) => {
     await page.emulateMedia({ colorScheme });

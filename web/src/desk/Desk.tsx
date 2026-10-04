@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { COMMON_CURRENCIES, INITIAL_BANKS, validateDraft, type Account, type AccountDraft, type AccountErrors } from "../workspace/accounts";
 import { FORMAT_VERSION } from "../workspace/crypto/vault";
 import { INACTIVITY_LOCK_MS } from "../workspace/inactivity";
@@ -31,6 +31,7 @@ export function Desk({ operator, accounts, usingEmulators, onAddAccount, onLock,
   const [view, setView] = useState<View>(viewFromHash);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [notice, setNotice] = useState("");
+  const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const onHash = () => setView(viewFromHash());
@@ -47,7 +48,16 @@ export function Desk({ operator, accounts, usingEmulators, onAddAccount, onLock,
 
   return (
     <div className="dk-desk">
-      <a className="dk-skip-link" href="#dk-main">
+      {/* Routing uses the URL hash, so the skip link must not change it: it
+          moves focus to the main region and leaves the destination as is. */}
+      <a
+        className="dk-skip-link"
+        href="#dk-main"
+        onClick={(event) => {
+          event.preventDefault();
+          mainRef.current?.focus();
+        }}
+      >
         Skip to content
       </a>
       <aside className="dk-sidebar">
@@ -95,7 +105,7 @@ export function Desk({ operator, accounts, usingEmulators, onAddAccount, onLock,
             </button>
           </div>
         </header>
-        <main className="dk-page" id="dk-main" tabIndex={-1}>
+        <main className="dk-page" id="dk-main" tabIndex={-1} ref={mainRef}>
           {view === "overview" && <Overview accounts={accounts} onAddAccount={() => setDialog("add-account")} onImport={() => setDialog("import")} />}
           {view === "transactions" && (
             <EmptyPage title="Every movement, in context" subtitle="Transactions from imported statements will appear here." icon="transactions" heading="No transactions yet" onImport={() => setDialog("import")}>
