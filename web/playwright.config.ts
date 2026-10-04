@@ -9,6 +9,8 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 // start, no CORS/proxy layer.
 export default defineConfig({
   testDir: "./tests",
+  // Workspace specs run against Firebase emulators via playwright.workspace.config.ts.
+  testMatch: "e2e.spec.ts",
   fullyParallel: true,
   reporter: "list",
   use: {

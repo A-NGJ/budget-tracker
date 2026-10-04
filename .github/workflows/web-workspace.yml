@@ -1,0 +1,77 @@
+# Cross-browser checks for the encrypted web workspace (issue #1).
+# Runs entirely against local Firebase emulators under the offline-only
+# `demo-budget-tracker` project: no secrets, credentials or billing.
+name: web workspace
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "web/**"
+      - "firebase.json"
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - ".github/workflows/web-workspace.yml"
+  push:
+    # The issue branch is listed so its first push runs the full browser
+    # suite before the pull request opens.
+    branches: [main, feature/1-encrypted-account-workspace]
+    paths:
+      - "web/**"
+      - "firebase.json"
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - ".github/workflows/web-workspace.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-workspace-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browsers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+    env:
+      # Adds branded Google Chrome and Microsoft Edge to the engine projects.
+      BRANDED_BROWSERS: chrome,msedge
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      # firebase-tools requires Java 21+ for the Firestore emulator.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - name: Install browsers
+        run: |
+          npx playwright install --with-deps chromium firefox webkit
+          # Runner images may ship Chrome and Edge already; --force keeps the
+          # install deterministic instead of failing on an existing copy.
+          npx playwright install --with-deps --force chrome msedge
+      - name: Record browser versions
+        run: node scripts/browser-versions.mjs | tee browser-versions.txt
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:rules
+      - name: Workspace end-to-end (Chromium, Firefox, WebKit, Chrome, Edge)
+        run: npm run test:workspace
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-workspace-results
+          path: |
+            web/browser-versions.txt
+            web/test-results/
+          if-no-files-found: ignore
+          retention-days: 14

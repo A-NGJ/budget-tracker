@@ -5,23 +5,35 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:emulators": "firebase emulators:exec --config ../firebase.json --only auth,firestore --project demo-budget-tracker --ui \"vite --mode emulator\"",
+    "emulators": "firebase emulators:start --config ../firebase.json --only auth,firestore --project demo-budget-tracker",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
+    "test": "vitest run --project unit",
+    "test:rules": "firebase emulators:exec --config ../firebase.json --only firestore --project demo-budget-tracker \"vitest run --project rules\"",
+    "test:workspace": "playwright test --config playwright.workspace.config.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {
     "echarts": "^5.5.0",
     "echarts-for-react": "^3.0.2",
+    "firebase": "^12.19.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@playwright/test": "^1.48.0",
+    "@types/node": "^22.20.5",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "firebase-tools": "^15.32.1",
+    "jsdom": "^26.1.0",
     "typescript": "^5.5.4",
-    "vite": "^5.4.0"
+    "vite": "^5.4.0",
+    "vitest": "^3.2.7"
   }
 }

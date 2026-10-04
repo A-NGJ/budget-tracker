@@ -13,7 +13,7 @@ const EXPECTED = {
 
 test.describe("Stats dashboard", () => {
   test("renders summary totals from the live backend", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/stats.html");
 
     await expect(page.getByTestId("dashboard")).toBeVisible();
 
@@ -23,7 +23,7 @@ test.describe("Stats dashboard", () => {
   });
 
   test("renders an ECharts canvas for each of the three chart sections", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/stats.html");
 
     await expect(page.getByTestId("dashboard")).toBeVisible();
 
