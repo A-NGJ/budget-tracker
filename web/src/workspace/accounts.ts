@@ -10,6 +10,12 @@ export interface Account {
   bank: string;
   currency: string;
   createdAt: string;
+  /**
+   * Account identifiers (such as an account number) that a confirmed
+   * statement export stated for this account. Used only to propose this
+   * account for a later export stating the same identifiers.
+   */
+  statementIdentifiers?: string[];
 }
 
 export type AccountDraft = Pick<Account, "name" | "bank" | "currency">;

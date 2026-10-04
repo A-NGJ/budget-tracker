@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
-import { Bytes, deleteDoc, doc, getDoc, getDocs, collection, serverTimestamp, setDoc, updateDoc, type Firestore } from "firebase/firestore";
+import { Bytes, deleteDoc, doc, getDoc, getDocs, collection, serverTimestamp, setDoc, updateDoc, writeBatch, type Firestore } from "firebase/firestore";
 
 const OWNER = "owner-uid";
 const OTHER = "other-uid";
@@ -122,6 +122,75 @@ describe("encrypted account records", () => {
   it("does not allow deleting records yet", async () => {
     await seedWorkspace();
     await assertFails(deleteDoc(doc(asOwner(), "workspaces", OWNER, "accounts", "acc-1")));
+  });
+});
+
+describe("imported statements", () => {
+  const record = (db: Firestore, name: string, id: string) => doc(db, "workspaces", OWNER, name, id);
+
+  async function seedImport() {
+    await seedWorkspace();
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore() as unknown as Firestore;
+      await setDoc(record(db, "statements", "s1"), envelope());
+      await setDoc(record(db, "transactions", "s1-0"), envelope());
+      await setDoc(record(db, "originals", "s1-0"), envelope());
+    });
+  }
+
+  it("lets the owner save a whole import in one batch", async () => {
+    await seedWorkspace();
+    const db = asOwner();
+    const batch = writeBatch(db);
+    batch.set(record(db, "accounts", "acc-2"), envelope());
+    for (let index = 0; index < 8; index += 1) batch.set(record(db, "originals", `s1-${index}`), envelope());
+    for (let index = 0; index < 8; index += 1) batch.set(record(db, "transactions", `s1-${index}`), envelope());
+    batch.set(record(db, "statements", "s1"), envelope());
+    await assertSucceeds(batch.commit());
+    for (const name of ["statements", "transactions", "originals"]) await assertSucceeds(getDocs(collection(db, "workspaces", OWNER, name)));
+  });
+
+  it("rejects a batch as a whole when one record is not encrypted", async () => {
+    await seedWorkspace();
+    const db = asOwner();
+    const batch = writeBatch(db);
+    batch.set(record(db, "originals", "s1-0"), envelope());
+    batch.set(record(db, "transactions", "s1-0"), { ...envelope(), description: "Husleje september" });
+    batch.set(record(db, "statements", "s1"), envelope());
+    await assertFails(batch.commit());
+    let leftBehind = true;
+    await env.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore() as unknown as Firestore;
+      const docs = await Promise.all(["statements/s1", "originals/s1-0"].map((path) => getDoc(doc(db, "workspaces", OWNER, ...path.split("/") as [string, string]))));
+      leftBehind = docs.some((item) => item.exists());
+    });
+    if (leftBehind) throw new Error("a rejected batch left records behind");
+  });
+
+  it("rejects other users and a foreign key id", async () => {
+    await seedImport();
+    for (const name of ["statements", "transactions", "originals"]) {
+      await assertFails(getDoc(record(asOther(), name, "s1")));
+      await assertFails(getDocs(collection(anonymous(), "workspaces", OWNER, name)));
+      await assertFails(setDoc(record(asOther(), name, "s2"), envelope()));
+      await assertFails(setDoc(record(asOwner(), name, "s2"), envelope({ keyId: "f".repeat(32) })));
+      await assertFails(setDoc(record(asOwner(), name, "s2"), envelope({ ciphertext: "Husleje september" })));
+    }
+  });
+
+  it("keeps imported transactions immutable", async () => {
+    await seedImport();
+    await assertFails(setDoc(record(asOwner(), "transactions", "s1-0"), envelope()));
+    await assertFails(deleteDoc(record(asOwner(), "transactions", "s1-0")));
+  });
+
+  it("lets the owner delete a retained original without deleting history", async () => {
+    await seedImport();
+    await assertFails(deleteDoc(record(asOther(), "originals", "s1-0")));
+    await assertFails(setDoc(record(asOwner(), "originals", "s1-0"), envelope()));
+    await assertSucceeds(deleteDoc(record(asOwner(), "originals", "s1-0")));
+    await assertSucceeds(setDoc(record(asOwner(), "statements", "s1"), envelope()));
+    await assertFails(deleteDoc(record(asOwner(), "statements", "s1")));
   });
 });
 

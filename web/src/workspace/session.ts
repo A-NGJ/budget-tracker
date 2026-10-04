@@ -4,7 +4,17 @@ import { newAccount, sortAccounts, type Account, type AccountDraft } from "./acc
 import { createWorkspace, unlockWorkspace, type WorkspaceHeader, type WorkspaceKey } from "./crypto/vault";
 import { googleProvider, type FirebaseServices } from "./firebase";
 import { watchInactivity } from "./inactivity";
-import { loadAccounts, loadWorkspaceHeader, saveAccount, saveNewWorkspaceHeader } from "./store";
+import { buildImportBatch, chunkTransactionsOf, sortStatements, sortTransactions, type ImportItem, type StatementImport, type Transaction } from "./import/statements";
+import {
+  deleteOriginal as deleteStoredOriginal,
+  loadAccounts,
+  loadImportedHistory,
+  loadOriginal as loadStoredOriginal,
+  loadWorkspaceHeader,
+  saveAccount,
+  saveImport,
+  saveNewWorkspaceHeader,
+} from "./store";
 
 export interface Operator {
   uid: string;
@@ -20,7 +30,7 @@ export type SessionPhase =
   | { kind: "loading-workspace"; operator: Operator }
   | { kind: "onboarding"; operator: Operator }
   | { kind: "locked"; operator: Operator; header: WorkspaceHeader; reason?: LockReason }
-  | { kind: "unlocked"; operator: Operator; header: WorkspaceHeader; accounts: Account[] }
+  | { kind: "unlocked"; operator: Operator; header: WorkspaceHeader; accounts: Account[]; statements: StatementImport[]; transactions: Transaction[] }
   | { kind: "failed"; operator: Operator; message: string };
 
 export interface WorkspaceSession {
@@ -31,6 +41,10 @@ export interface WorkspaceSession {
   unlock: (passphrase: string) => Promise<void>;
   lock: (reason?: LockReason) => void;
   addAccount: (draft: AccountDraft) => Promise<Account>;
+  /** Save confirmed statements in one atomic write. Nothing is stored before this is called. */
+  importStatements: (items: ImportItem[]) => Promise<StatementImport[]>;
+  loadOriginal: (statementId: string) => Promise<Uint8Array>;
+  deleteOriginal: (statementId: string) => Promise<void>;
   retry: () => void;
 }
 
@@ -122,10 +136,10 @@ export function useWorkspaceSession({ auth, db }: FirebaseServices): WorkspaceSe
 
   const enter = useCallback(
     async (operator: Operator, header: WorkspaceHeader, key: WorkspaceKey, epoch: number) => {
-      const accounts = await loadAccounts(db, key);
+      const [accounts, history] = await Promise.all([loadAccounts(db, key), loadImportedHistory(db, key)]);
       if (epoch !== epochRef.current) throw new SessionEndedError();
       keyRef.current = key;
-      setPhase({ kind: "unlocked", operator, header, accounts });
+      setPhase({ kind: "unlocked", operator, header, accounts, ...history });
     },
     [db],
   );
@@ -188,11 +202,70 @@ export function useWorkspaceSession({ auth, db }: FirebaseServices): WorkspaceSe
     [db],
   );
 
+  const importStatements = useCallback(
+    async (items: ImportItem[]) => {
+      const key = keyRef.current;
+      const epoch = epochRef.current;
+      const current = phaseRef.current;
+      if (!key || current.kind !== "unlocked") throw new SessionEndedError();
+      const plan = await buildImportBatch(items, current.accounts);
+      await saveImport(db, key, plan);
+      if (epoch !== epochRef.current) throw new SessionEndedError();
+      const transactions = plan.transactionChunks.flatMap(chunkTransactionsOf);
+      setPhase((latest) => {
+        if (latest.kind !== "unlocked") return latest;
+        const accounts = new Map(latest.accounts.map((account) => [account.id, account]));
+        for (const account of plan.accounts) accounts.set(account.id, account);
+        return {
+          ...latest,
+          accounts: sortAccounts([...accounts.values()]),
+          statements: sortStatements([...latest.statements, ...plan.statements]),
+          transactions: sortTransactions([...latest.transactions, ...transactions]),
+        };
+      });
+      return plan.statements;
+    },
+    [db],
+  );
+
+  const findStatement = (statementId: string) => {
+    const key = keyRef.current;
+    const current = phaseRef.current;
+    if (!key || current.kind !== "unlocked") throw new SessionEndedError();
+    const statement = current.statements.find((item) => item.id === statementId);
+    if (!statement) throw new Error("That statement is not in this workspace.");
+    return { key, statement };
+  };
+
+  const loadOriginal = useCallback(
+    async (statementId: string) => {
+      const { key, statement } = findStatement(statementId);
+      const epoch = epochRef.current;
+      const bytes = await loadStoredOriginal(db, key, statement);
+      if (epoch !== epochRef.current) throw new SessionEndedError();
+      return bytes;
+    },
+    [db],
+  );
+
+  const deleteOriginal = useCallback(
+    async (statementId: string) => {
+      const { key, statement } = findStatement(statementId);
+      const epoch = epochRef.current;
+      const updated = await deleteStoredOriginal(db, key, statement);
+      if (epoch !== epochRef.current) throw new SessionEndedError();
+      setPhase((latest) =>
+        latest.kind === "unlocked" ? { ...latest, statements: latest.statements.map((item) => (item.id === updated.id ? updated : item)) } : latest,
+      );
+    },
+    [db],
+  );
+
   const retry = useCallback(() => {
     const operator = operatorRef.current;
     if (operator) void openWorkspace(operator);
     else setPhase({ kind: "signed-out" });
   }, [openWorkspace]);
 
-  return { phase, signIn, signOut, createWithPassphrase, unlock, lock, addAccount, retry };
+  return { phase, signIn, signOut, createWithPassphrase, unlock, lock, addAccount, importStatements, loadOriginal, deleteOriginal, retry };
 }

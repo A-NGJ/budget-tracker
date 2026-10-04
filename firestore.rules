@@ -50,13 +50,44 @@ service cloud.firestore {
       allow create: if owns(uid) && validHeader(request.resource.data);
       allow update, delete, list: if false;
 
-      match /accounts/{accountId} {
-        allow read: if owns(uid);
-        allow create, update: if owns(uid)
-          && exists(/databases/$(database)/documents/workspaces/$(uid))
+      // Encrypted records under the workspace. Writes need the workspace's
+      // key id; reading the header with get() also requires that it exists.
+      // One get() of the same document per write keeps a whole import batch
+      // within the rules' document-access limit.
+      function validRecord() {
+        return owns(uid)
           && validEnvelope(request.resource.data)
           && request.resource.data.keyId == get(/databases/$(database)/documents/workspaces/$(uid)).data.keyId;
+      }
+
+      match /accounts/{accountId} {
+        allow read: if owns(uid);
+        allow create, update: if validRecord();
         allow delete: if false;
+      }
+
+      // A confirmed statement import. Updated only to record that its
+      // retained original was deleted.
+      match /statements/{statementId} {
+        allow read: if owns(uid);
+        allow create, update: if validRecord();
+        allow delete: if false;
+      }
+
+      // Imported transactions are immutable bank records: written once with
+      // their statement, never changed or removed through this path.
+      match /transactions/{chunkId} {
+        allow read: if owns(uid);
+        allow create: if validRecord();
+        allow update, delete: if false;
+      }
+
+      // Retained original statement files. The operator may delete them
+      // without touching the transactions imported from them.
+      match /originals/{chunkId} {
+        allow read, delete: if owns(uid);
+        allow create: if validRecord();
+        allow update: if false;
       }
     }
 
