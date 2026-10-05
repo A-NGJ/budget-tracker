@@ -35,8 +35,13 @@ function Session({ services }: { services: FirebaseServices }) {
         <Desk
           operator={phase.operator}
           accounts={phase.accounts}
+          statements={phase.statements}
+          transactions={phase.transactions}
           usingEmulators={services.usingEmulators}
           onAddAccount={session.addAccount}
+          onImport={session.importStatements}
+          onLoadOriginal={session.loadOriginal}
+          onDeleteOriginal={session.deleteOriginal}
           onLock={() => session.lock("manual")}
           onSignOut={signOut}
         />

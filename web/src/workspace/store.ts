@@ -4,6 +4,12 @@
 //                                    wrapped key slots. No readable content.
 //   workspaces/{uid}/accounts/{id}   RecordEnvelope: AES-GCM ciphertext of an
 //                                    Account, bound to its uid/collection/id.
+//   workspaces/{uid}/statements/{id} RecordEnvelope of a StatementImport.
+//   workspaces/{uid}/transactions/{id}
+//                                    RecordEnvelope of a TransactionChunk: a
+//                                    batch of one statement's transactions.
+//   workspaces/{uid}/originals/{id}  RecordEnvelope of raw bytes: one chunk of
+//                                    a retained original statement file.
 //
 // Only ciphertext, random salts/IVs, KDF parameters and opaque ids leave the
 // browser. Readable records and keys never reach this module's writes.
@@ -16,15 +22,31 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
+  writeBatch,
   type DocumentData,
   type Firestore,
 } from "firebase/firestore";
 import { ACCOUNTS_COLLECTION, sortAccounts, type Account } from "./accounts";
 import {
+  ORIGINALS_COLLECTION,
+  STATEMENTS_COLLECTION,
+  TRANSACTIONS_COLLECTION,
+  chunkTransactionsOf,
+  joinChunks,
+  sortStatements,
+  sortTransactions,
+  type ImportBatch,
+  type StatementImport,
+  type Transaction,
+  type TransactionChunk,
+} from "./import/statements";
+import {
   CIPHER,
   FORMAT_VERSION,
   KDF,
+  decryptBytes,
   decryptRecord,
+  encryptBytes,
   encryptRecord,
   type KeySlot,
   type RecordEnvelope,
@@ -48,7 +70,8 @@ export class CorruptRecordError extends Error {
 }
 
 const workspaceRef = (db: Firestore, uid: string) => doc(db, "workspaces", uid);
-const accountsRef = (db: Firestore, uid: string) => collection(db, "workspaces", uid, ACCOUNTS_COLLECTION);
+const recordsRef = (db: Firestore, uid: string, name: string) => collection(db, "workspaces", uid, name);
+const accountsRef = (db: Firestore, uid: string) => recordsRef(db, uid, ACCOUNTS_COLLECTION);
 
 function slotToFirestore(slot: KeySlot): DocumentData {
   return {
@@ -123,18 +146,87 @@ export async function saveAccount(db: Firestore, workspaceKey: WorkspaceKey, acc
   await setDoc(doc(accountsRef(db, workspaceKey.uid), account.id), envelopeToFirestore(envelope));
 }
 
-export async function loadAccounts(db: Firestore, workspaceKey: WorkspaceKey): Promise<Account[]> {
-  const snapshot = await getDocs(accountsRef(db, workspaceKey.uid));
-  const accounts = await Promise.all(
+async function loadRecords<T extends { id: string }>(db: Firestore, workspaceKey: WorkspaceKey, name: string): Promise<T[]> {
+  const snapshot = await getDocs(recordsRef(db, workspaceKey.uid, name));
+  return Promise.all(
     snapshot.docs.map(async (item) => {
       try {
-        const account = await decryptRecord<Account>(workspaceKey, ACCOUNTS_COLLECTION, item.id, envelopeFromFirestore(item.data()));
-        if (account.id !== item.id) throw new Error("id mismatch");
-        return account;
+        const record = await decryptRecord<T>(workspaceKey, name, item.id, envelopeFromFirestore(item.data()));
+        if (record.id !== item.id) throw new Error("id mismatch");
+        return record;
       } catch {
         throw new CorruptRecordError(item.id);
       }
     }),
   );
-  return sortAccounts(accounts);
+}
+
+export async function loadAccounts(db: Firestore, workspaceKey: WorkspaceKey): Promise<Account[]> {
+  return sortAccounts(await loadRecords<Account>(db, workspaceKey, ACCOUNTS_COLLECTION));
+}
+
+export interface ImportedHistory {
+  statements: StatementImport[];
+  transactions: Transaction[];
+}
+
+/** Decrypt every confirmed statement and its transactions. Retained originals stay encrypted until requested. */
+export async function loadImportedHistory(db: Firestore, workspaceKey: WorkspaceKey): Promise<ImportedHistory> {
+  const [statements, chunks] = await Promise.all([
+    loadRecords<StatementImport>(db, workspaceKey, STATEMENTS_COLLECTION),
+    loadRecords<TransactionChunk>(db, workspaceKey, TRANSACTIONS_COLLECTION),
+  ]);
+  const confirmed = new Set(statements.map((statement) => statement.id));
+  // A chunk only counts once its statement record exists; both arrive in one batch.
+  const transactions = chunks.filter((chunk) => confirmed.has(chunk.statementId)).flatMap(chunkTransactionsOf);
+  return { statements: sortStatements(statements), transactions: sortTransactions(transactions) };
+}
+
+/**
+ * Encrypt and store a confirmed import as one atomic batch: every statement,
+ * its transactions, the retained original files and any new or updated
+ * accounts are either all saved or none are.
+ */
+export async function saveImport(db: Firestore, workspaceKey: WorkspaceKey, plan: ImportBatch): Promise<void> {
+  const { uid } = workspaceKey;
+  const batch = writeBatch(db);
+  const put = (name: string, id: string, envelope: RecordEnvelope) => batch.set(doc(recordsRef(db, uid, name), id), envelopeToFirestore(envelope));
+  for (const account of plan.accounts) put(ACCOUNTS_COLLECTION, account.id, await encryptRecord(workspaceKey, ACCOUNTS_COLLECTION, account.id, account));
+  for (const chunk of plan.originalChunks) put(ORIGINALS_COLLECTION, chunk.id, await encryptBytes(workspaceKey, ORIGINALS_COLLECTION, chunk.id, chunk.bytes));
+  for (const chunk of plan.transactionChunks) put(TRANSACTIONS_COLLECTION, chunk.id, await encryptRecord(workspaceKey, TRANSACTIONS_COLLECTION, chunk.id, chunk));
+  for (const statement of plan.statements) put(STATEMENTS_COLLECTION, statement.id, await encryptRecord(workspaceKey, STATEMENTS_COLLECTION, statement.id, statement));
+  await batch.commit();
+}
+
+/** Decrypt and reassemble a retained original statement file. */
+export async function loadOriginal(db: Firestore, workspaceKey: WorkspaceKey, statement: StatementImport): Promise<Uint8Array> {
+  const chunks = await Promise.all(
+    statement.original.chunkIds.map(async (id) => {
+      const snapshot = await getDoc(doc(recordsRef(db, workspaceKey.uid, ORIGINALS_COLLECTION), id));
+      if (!snapshot.exists()) throw new CorruptRecordError(id);
+      try {
+        return await decryptBytes(workspaceKey, ORIGINALS_COLLECTION, id, envelopeFromFirestore(snapshot.data()));
+      } catch {
+        throw new CorruptRecordError(id);
+      }
+    }),
+  );
+  return joinChunks(chunks);
+}
+
+/**
+ * Delete a retained original file while keeping the statement record, its
+ * transactions and their provenance. One atomic batch, so the statement never
+ * points at a half-deleted file.
+ */
+export async function deleteOriginal(db: Firestore, workspaceKey: WorkspaceKey, statement: StatementImport, now = new Date()): Promise<StatementImport> {
+  const updated: StatementImport = { ...statement, original: { ...statement.original, chunkIds: [], deletedAt: now.toISOString() } };
+  const batch = writeBatch(db);
+  for (const id of statement.original.chunkIds) batch.delete(doc(recordsRef(db, workspaceKey.uid, ORIGINALS_COLLECTION), id));
+  batch.set(
+    doc(recordsRef(db, workspaceKey.uid, STATEMENTS_COLLECTION), statement.id),
+    envelopeToFirestore(await encryptRecord(workspaceKey, STATEMENTS_COLLECTION, statement.id, updated)),
+  );
+  await batch.commit();
+  return updated;
 }

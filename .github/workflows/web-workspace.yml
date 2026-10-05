@@ -15,7 +15,7 @@ on:
   push:
     # The issue branch is listed so its first push runs the full browser
     # suite before the pull request opens.
-    branches: [main, feature/1-encrypted-account-workspace]
+    branches: [main, feature/2-danske-statement-import]
     paths:
       - "web/**"
       - "firebase.json"

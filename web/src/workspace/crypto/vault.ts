@@ -210,6 +210,24 @@ export async function encryptRecord(workspaceKey: WorkspaceKey, collection: stri
 }
 
 export async function decryptRecord<T>(workspaceKey: WorkspaceKey, collection: string, recordId: string, envelope: RecordEnvelope): Promise<T> {
+  return JSON.parse(decoder.decode(await decryptBytes(workspaceKey, collection, recordId, envelope))) as T;
+}
+
+/**
+ * Encrypt raw bytes, such as a retained original statement file, into the
+ * same envelope and binding as a JSON record. The bytes are not re-encoded.
+ */
+export async function encryptBytes(workspaceKey: WorkspaceKey, collection: string, recordId: string, bytes: Uint8Array): Promise<RecordEnvelope> {
+  const iv = randomBytes(IV_BYTES);
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv, additionalData: recordAad(workspaceKey.uid, collection, recordId, workspaceKey.keyId) },
+    workspaceKey.key,
+    buffer(bytes),
+  );
+  return { formatVersion: FORMAT_VERSION, keyId: workspaceKey.keyId, iv, ciphertext: new Uint8Array(ciphertext) };
+}
+
+export async function decryptBytes(workspaceKey: WorkspaceKey, collection: string, recordId: string, envelope: RecordEnvelope): Promise<Uint8Array> {
   if (envelope.formatVersion !== FORMAT_VERSION) throw new UnsupportedFormatError(`record version ${String(envelope.formatVersion)}`);
   if (envelope.keyId !== workspaceKey.keyId) throw new UnsupportedFormatError("record encrypted under a different workspace key");
   const plaintext = await crypto.subtle.decrypt(
@@ -217,5 +235,5 @@ export async function decryptRecord<T>(workspaceKey: WorkspaceKey, collection: s
     workspaceKey.key,
     buffer(envelope.ciphertext),
   );
-  return JSON.parse(decoder.decode(plaintext)) as T;
+  return new Uint8Array(plaintext);
 }

@@ -2,8 +2,11 @@ import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } fr
 import { COMMON_CURRENCIES, INITIAL_BANKS, validateDraft, type Account, type AccountDraft, type AccountErrors } from "../workspace/accounts";
 import { FORMAT_VERSION } from "../workspace/crypto/vault";
 import { INACTIVITY_LOCK_MS } from "../workspace/inactivity";
+import type { ImportItem, StatementImport, Transaction } from "../workspace/import/statements";
 import { describeError, type Operator } from "../workspace/session";
 import { Brand } from "./Brand";
+import { formatBytes, formatDate, formatMoney, formatPeriod } from "./format";
+import { ImportDialog } from "./ImportDialog";
 import { Icon, type IconName } from "./Icon";
 import { Modal } from "./Modal";
 
@@ -19,15 +22,20 @@ function viewFromHash(): View {
 interface DeskProps {
   operator: Operator;
   accounts: Account[];
+  statements: StatementImport[];
+  transactions: Transaction[];
   usingEmulators: boolean;
   onAddAccount: (draft: AccountDraft) => Promise<Account>;
+  onImport: (items: ImportItem[]) => Promise<StatementImport[]>;
+  onLoadOriginal: (statementId: string) => Promise<Uint8Array>;
+  onDeleteOriginal: (statementId: string) => Promise<void>;
   onLock: () => void;
   onSignOut: () => void;
 }
 
-type Dialog = "import" | "settings" | "add-account" | null;
+type Dialog = "import" | "settings" | "add-account" | { deleteOriginal: StatementImport } | null;
 
-export function Desk({ operator, accounts, usingEmulators, onAddAccount, onLock, onSignOut }: DeskProps) {
+export function Desk({ operator, accounts, statements, transactions, usingEmulators, onAddAccount, onImport, onLoadOriginal, onDeleteOriginal, onLock, onSignOut }: DeskProps) {
   const [view, setView] = useState<View>(viewFromHash);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [notice, setNotice] = useState("");
@@ -106,12 +114,29 @@ export function Desk({ operator, accounts, usingEmulators, onAddAccount, onLock,
           </div>
         </header>
         <main className="dk-page" id="dk-main" tabIndex={-1} ref={mainRef}>
-          {view === "overview" && <Overview accounts={accounts} onAddAccount={() => setDialog("add-account")} onImport={() => setDialog("import")} />}
-          {view === "transactions" && (
-            <EmptyPage title="Every movement, in context" subtitle="Transactions from imported statements will appear here." icon="transactions" heading="No transactions yet" onImport={() => setDialog("import")}>
-              Import a bank statement to see its transactions. Transfers and contributions will stay visible without inflating spending.
-            </EmptyPage>
+          {view === "overview" && (
+            <Overview accounts={accounts} statements={statements} onAddAccount={() => setDialog("add-account")} onImport={() => setDialog("import")} />
           )}
+          {view === "transactions" &&
+            (transactions.length ? (
+              <TransactionsPage
+                accounts={accounts}
+                statements={statements}
+                transactions={transactions}
+                onDownload={async (statement) => {
+                  try {
+                    download(statement.original.fileName, statement.original.mediaType, await onLoadOriginal(statement.id));
+                  } catch (error) {
+                    setNotice(`Could not open the original: ${describeError(error)}`);
+                  }
+                }}
+                onDelete={(statement) => setDialog({ deleteOriginal: statement })}
+              />
+            ) : (
+              <EmptyPage title="Every movement, in context" subtitle="Transactions from imported statements will appear here." icon="transactions" heading="No transactions yet" onImport={() => setDialog("import")}>
+                Import a bank statement to see its transactions. Transfers and contributions will stay visible without inflating spending.
+              </EmptyPage>
+            ))}
           {view === "inbox" && (
             <EmptyPage title="Review inbox" subtitle="Uncategorized transactions, transfer matches and recurring-cost suggestions." icon="inbox" heading="Nothing to review">
               Decisions appear here once imported transactions need a category, a transfer confirmation or a recurring-cost decision.
@@ -132,7 +157,31 @@ export function Desk({ operator, accounts, usingEmulators, onAddAccount, onLock,
           </button>
         </div>
       )}
-      {dialog === "import" && <ImportUnavailable onClose={() => setDialog(null)} />}
+      {dialog === "import" && (
+        <ImportDialog
+          accounts={accounts}
+          onClose={() => setDialog(null)}
+          onConfirm={async (items) => {
+            const saved = await onImport(items);
+            const count = saved.reduce((total, statement) => total + statement.recordCount, 0);
+            setDialog(null);
+            setNotice(`Imported ${count} ${count === 1 ? "transaction" : "transactions"} from ${saved.length === 1 ? "1 statement" : `${saved.length} statements`} · encrypted before upload.`);
+            go("transactions");
+            return saved;
+          }}
+        />
+      )}
+      {dialog && typeof dialog === "object" && (
+        <DeleteOriginalDialog
+          statement={dialog.deleteOriginal}
+          onClose={() => setDialog(null)}
+          onConfirm={async () => {
+            await onDeleteOriginal(dialog.deleteOriginal.id);
+            setDialog(null);
+            setNotice(`Deleted the original ${dialog.deleteOriginal.original.fileName}. Its transactions remain.`);
+          }}
+        />
+      )}
       {dialog === "settings" && (
         <SettingsDialog
           operator={operator}
@@ -179,7 +228,7 @@ function EmptyMetric({ label, detail }: { label: string; detail: string }) {
   );
 }
 
-function Overview({ accounts, onAddAccount, onImport }: { accounts: Account[]; onAddAccount: () => void; onImport: () => void }) {
+function Overview({ accounts, statements, onAddAccount, onImport }: { accounts: Account[]; statements: StatementImport[]; onAddAccount: () => void; onImport: () => void }) {
   const count = accounts.length;
   return (
     <>
@@ -245,7 +294,8 @@ function Overview({ accounts, onAddAccount, onImport }: { accounts: Account[]; o
         </div>
       </div>
       <p className="dk-coverage">
-        <span className="dk-status-dot" aria-hidden="true" /> Statement coverage: no statements imported
+        <span className="dk-status-dot" aria-hidden="true" /> Statement coverage:{" "}
+        {statements.length ? `${statements.length} ${statements.length === 1 ? "statement" : "statements"} imported` : "no statements imported"}
       </p>
     </>
   );
@@ -272,21 +322,139 @@ function EmptyPage({ title, subtitle, icon, heading, children, onImport }: { tit
   );
 }
 
-function ImportUnavailable({ onClose }: { onClose: () => void }) {
+/** Hand a decrypted original back to the operator as a local file; nothing is uploaded. */
+function download(fileName: string, mediaType: string, bytes: Uint8Array) {
+  const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: mediaType }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function TransactionsPage({
+  accounts,
+  statements,
+  transactions,
+  onDownload,
+  onDelete,
+}: {
+  accounts: Account[];
+  statements: StatementImport[];
+  transactions: Transaction[];
+  onDownload: (statement: StatementImport) => void;
+  onDelete: (statement: StatementImport) => void;
+}) {
+  const accountName = new Map(accounts.map((account) => [account.id, `${account.name} · ${account.bank}`]));
+  const count = transactions.length;
   return (
-    <Modal eyebrow="IMPORT STATEMENTS" title="Statement import is coming next" onClose={onClose}>
-      <div className="dk-dropzone">
-        <span className="dk-upload-symbol" aria-hidden="true">
-          <Icon name="upload" />
-        </span>
-        <p>
-          Importing Danske Bank, mBank and Revolut statements is not available in this version. When it arrives, files are parsed and encrypted in this browser
-          before anything is stored.
+    <>
+      <PageTitle title="Every movement, in context" subtitle={`${count} ${count === 1 ? "transaction" : "transactions"} from ${statements.length} imported ${statements.length === 1 ? "statement" : "statements"}`} />
+      <section className="dk-panel dk-table-panel" aria-labelledby="dk-ledger-heading">
+        <div className="dk-section-heading">
+          <h2 id="dk-ledger-heading">Transactions</h2>
+          <span>Original bank records · categories come next</span>
+        </div>
+        <div className="dk-table-scroll">
+          <table className="dk-table" aria-labelledby="dk-ledger-heading">
+            <thead>
+              <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Description</th>
+                <th scope="col">Account</th>
+                <th scope="col">Category</th>
+                <th scope="col" className="dk-number">
+                  Amount
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((transaction) => (
+                <tr key={transaction.id}>
+                  <td>{formatDate(transaction.bank.date)}</td>
+                  <td>{transaction.bank.description}</td>
+                  <td>{accountName.get(transaction.accountId) ?? "Unknown account"}</td>
+                  {/* No category decision is stored yet, which is not the same as Other. */}
+                  <td>
+                    <span className="dk-tag dk-tag-warning">Uncategorized</span>
+                  </td>
+                  <td className="dk-number">{formatMoney(transaction.bank.amount, transaction.bank.currency)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section className="dk-panel dk-statements" aria-labelledby="dk-statements-heading">
+        <div className="dk-section-heading">
+          <h2 id="dk-statements-heading">Imported statements</h2>
+          <span>Originals are kept encrypted until you delete them</span>
+        </div>
+        <ul className="dk-statement-list" aria-labelledby="dk-statements-heading">
+          {statements.map((statement) => (
+            <li key={statement.id}>
+              <span className="dk-account-name">
+                <strong>{statement.original.fileName}</strong>
+                <small>
+                  {accountName.get(statement.accountId) ?? "Unknown account"} · {statement.recordCount} {statement.recordCount === 1 ? "transaction" : "transactions"} ·{" "}
+                  {formatPeriod(statement.period)}
+                </small>
+              </span>
+              {statement.original.deletedAt ? (
+                <span className="dk-tag">Original deleted</span>
+              ) : (
+                <>
+                  <span className="dk-muted dk-statement-size">{formatBytes(statement.original.byteLength)}</span>
+                  <button type="button" className="dk-text-button" onClick={() => onDownload(statement)} aria-label={`Download original ${statement.original.fileName}`}>
+                    Download original
+                  </button>
+                  <button type="button" className="dk-text-button dk-danger-text" onClick={() => onDelete(statement)} aria-label={`Delete original ${statement.original.fileName}`}>
+                    Delete original
+                  </button>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </>
+  );
+}
+
+function DeleteOriginalDialog({ statement, onClose, onConfirm }: { statement: StatementImport; onClose: () => void; onConfirm: () => Promise<void> }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  return (
+    <Modal eyebrow="RETAINED ORIGINAL" title="Delete the original file?" onClose={() => !busy && onClose()}>
+      <p className="dk-muted">
+        This permanently deletes the stored copy of <strong>{statement.original.fileName}</strong>. Its {statement.recordCount}{" "}
+        {statement.recordCount === 1 ? "transaction stays" : "transactions stay"} in your history with their import provenance.
+      </p>
+      {error && (
+        <p className="dk-form-error" role="alert">
+          {error}
         </p>
-      </div>
+      )}
       <div className="dk-dialog-actions">
-        <button type="button" className="dk-button dk-primary" onClick={onClose} data-autofocus>
-          Close
+        <button type="button" className="dk-button" onClick={onClose} disabled={busy} data-autofocus>
+          Keep original
+        </button>
+        <button
+          type="button"
+          className="dk-button dk-danger"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setError(undefined);
+            try {
+              await onConfirm();
+            } catch (failure) {
+              setError(describeError(failure));
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Deleting…" : "Delete original"}
         </button>
       </div>
     </Modal>
