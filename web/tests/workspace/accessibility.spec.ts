@@ -151,7 +151,7 @@ for (const colorScheme of ["light", "dark"] as const) {
   });
 }
 
-test("statement preview and ledger have no accessibility violations", async ({ page }) => {
+test("statement preview, ledger, edit dialog and inbox have no accessibility violations", async ({ page }) => {
   await page.goto("/");
   await signInWithGoogle(page, "operator@example.com");
   await page.getByLabel("Unlock passphrase").fill(PASSPHRASE);
@@ -174,5 +174,12 @@ test("statement preview and ledger have no accessibility violations", async ({ p
   await preview.getByRole("button", { name: "Use this account" }).click();
   await preview.getByRole("button", { name: "Import statement" }).click();
   await expect(page.getByRole("table", { name: "Transactions" })).toBeVisible();
+  await expectNoAxeViolations(page);
+  await page.getByRole("button", { name: "Edit Husleje" }).click();
+  await expect(page.getByRole("dialog", { name: "Edit transaction" })).toBeVisible();
+  await expectNoAxeViolations(page);
+  await page.keyboard.press("Escape");
+  await page.getByRole("navigation", { name: "Main navigation" }).getByRole("button", { name: /^Inbox/ }).click();
+  await expect(page.getByRole("list", { name: "Uncategorized transactions" })).toBeVisible();
   await expectNoAxeViolations(page);
 });
