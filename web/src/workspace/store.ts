@@ -10,6 +10,13 @@
 //                                    batch of one statement's transactions.
 //   workspaces/{uid}/originals/{id}  RecordEnvelope of raw bytes: one chunk of
 //                                    a retained original statement file.
+//   workspaces/{uid}/decisions/{transactionId}
+//                                    RecordEnvelope of a DecisionRecord: the
+//                                    category/type decision for one transaction
+//                                    and the decision its last edit replaced.
+//   workspaces/{uid}/merchant-choices/{random id}
+//                                    RecordEnvelope of a MerchantChoice. The
+//                                    merchant label is only in the ciphertext.
 //
 // Only ciphertext, random salts/IVs, KDF parameters and opaque ids leave the
 // browser. Readable records and keys never reach this module's writes.
@@ -40,6 +47,14 @@ import {
   type Transaction,
   type TransactionChunk,
 } from "./import/statements";
+import {
+  DECISIONS_COLLECTION,
+  MERCHANT_CHOICES_COLLECTION,
+  parseDecisionRecord,
+  parseMerchantChoice,
+  type DecisionRecord,
+  type MerchantChoice,
+} from "./classification/decisions";
 import {
   CIPHER,
   FORMAT_VERSION,
@@ -146,12 +161,12 @@ export async function saveAccount(db: Firestore, workspaceKey: WorkspaceKey, acc
   await setDoc(doc(accountsRef(db, workspaceKey.uid), account.id), envelopeToFirestore(envelope));
 }
 
-async function loadRecords<T extends { id: string }>(db: Firestore, workspaceKey: WorkspaceKey, name: string): Promise<T[]> {
+async function loadRecords<T extends { id: string }>(db: Firestore, workspaceKey: WorkspaceKey, name: string, parse: (value: unknown) => T = (value) => value as T): Promise<T[]> {
   const snapshot = await getDocs(recordsRef(db, workspaceKey.uid, name));
   return Promise.all(
     snapshot.docs.map(async (item) => {
       try {
-        const record = await decryptRecord<T>(workspaceKey, name, item.id, envelopeFromFirestore(item.data()));
+        const record = parse(await decryptRecord<unknown>(workspaceKey, name, item.id, envelopeFromFirestore(item.data())));
         if (record.id !== item.id) throw new Error("id mismatch");
         return record;
       } catch {
@@ -168,18 +183,26 @@ export async function loadAccounts(db: Firestore, workspaceKey: WorkspaceKey): P
 export interface ImportedHistory {
   statements: StatementImport[];
   transactions: Transaction[];
+  decisions: DecisionRecord[];
+  merchantChoices: MerchantChoice[];
 }
 
-/** Decrypt every confirmed statement and its transactions. Retained originals stay encrypted until requested. */
+/**
+ * Decrypt every confirmed statement, its transactions, their category/type
+ * decisions and the remembered merchant choices. Retained originals stay
+ * encrypted until requested.
+ */
 export async function loadImportedHistory(db: Firestore, workspaceKey: WorkspaceKey): Promise<ImportedHistory> {
-  const [statements, chunks] = await Promise.all([
+  const [statements, chunks, decisions, merchantChoices] = await Promise.all([
     loadRecords<StatementImport>(db, workspaceKey, STATEMENTS_COLLECTION),
     loadRecords<TransactionChunk>(db, workspaceKey, TRANSACTIONS_COLLECTION),
+    loadRecords(db, workspaceKey, DECISIONS_COLLECTION, parseDecisionRecord),
+    loadRecords(db, workspaceKey, MERCHANT_CHOICES_COLLECTION, parseMerchantChoice),
   ]);
   const confirmed = new Set(statements.map((statement) => statement.id));
   // A chunk only counts once its statement record exists; both arrive in one batch.
   const transactions = chunks.filter((chunk) => confirmed.has(chunk.statementId)).flatMap(chunkTransactionsOf);
-  return { statements: sortStatements(statements), transactions: sortTransactions(transactions) };
+  return { statements: sortStatements(statements), transactions: sortTransactions(transactions), decisions, merchantChoices };
 }
 
 /**
@@ -195,6 +218,25 @@ export async function saveImport(db: Firestore, workspaceKey: WorkspaceKey, plan
   for (const chunk of plan.originalChunks) put(ORIGINALS_COLLECTION, chunk.id, await encryptBytes(workspaceKey, ORIGINALS_COLLECTION, chunk.id, chunk.bytes));
   for (const chunk of plan.transactionChunks) put(TRANSACTIONS_COLLECTION, chunk.id, await encryptRecord(workspaceKey, TRANSACTIONS_COLLECTION, chunk.id, chunk));
   for (const statement of plan.statements) put(STATEMENTS_COLLECTION, statement.id, await encryptRecord(workspaceKey, STATEMENTS_COLLECTION, statement.id, statement));
+  for (const record of plan.decisions) put(DECISIONS_COLLECTION, record.id, await encryptRecord(workspaceKey, DECISIONS_COLLECTION, record.id, record));
+  await batch.commit();
+}
+
+/**
+ * Save category/type decisions and remembered merchant choices from one
+ * operator action as one atomic batch, so a remembered choice is never stored
+ * without the decision that created it. Bank records are never written here.
+ */
+export async function saveDecisions(
+  db: Firestore,
+  workspaceKey: WorkspaceKey,
+  change: { decisions: readonly DecisionRecord[]; merchantChoices?: readonly MerchantChoice[] },
+): Promise<void> {
+  const batch = writeBatch(db);
+  const put = async (name: string, record: { id: string }) =>
+    batch.set(doc(recordsRef(db, workspaceKey.uid, name), record.id), envelopeToFirestore(await encryptRecord(workspaceKey, name, record.id, record)));
+  for (const record of change.decisions) await put(DECISIONS_COLLECTION, record);
+  for (const choice of change.merchantChoices ?? []) await put(MERCHANT_CHOICES_COLLECTION, choice);
   await batch.commit();
 }
 

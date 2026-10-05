@@ -50,6 +50,15 @@ describe("import batches", () => {
     expect(Object.keys(transactions[1])).not.toContain("category");
     expect(joinChunks(batch.originalChunks.map((chunk) => chunk.bytes))).toEqual(one.file.bytes);
     expect(batch.accounts).toEqual([]);
+    expect(batch.decisions).toEqual([]);
+  });
+
+  it("adds decisions from remembered choices for the new transactions only", async () => {
+    const one = item(["01.09.2026;-100,00;Netto", "01.09.2026;-50,00;Lunch"], everyday);
+    const batch = await buildImportBatch([one], [everyday], new Date(), (transactions) =>
+      transactions.filter((t) => t.bank.description === "Netto").map((t) => ({ id: t.id, current: null })),
+    );
+    expect(batch.decisions).toEqual([{ id: `${batch.statements[0].id}-r1`, current: null }]);
   });
 
   it("saves an account created during the preview with its first import", async () => {

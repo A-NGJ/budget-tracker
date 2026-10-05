@@ -82,6 +82,24 @@ service cloud.firestore {
         allow update, delete: if false;
       }
 
+      // Category/type decisions, one per transaction and keyed by its opaque
+      // transaction id. Replaced on every edit or undo; never deleted, since
+      // returning a transaction to uncategorized is itself a recorded state.
+      match /decisions/{transactionId} {
+        allow read: if owns(uid);
+        allow create, update: if validRecord();
+        allow delete: if false;
+      }
+
+      // Remembered merchant choices, keyed by random ids so no merchant label
+      // appears outside the ciphertext. Replaced when the operator remembers
+      // a different choice for the same merchant.
+      match /merchant-choices/{choiceId} {
+        allow read: if owns(uid);
+        allow create, update: if validRecord();
+        allow delete: if false;
+      }
+
       // Retained original statement files. The operator may delete them
       // without touching the transactions imported from them.
       match /originals/{chunkId} {
