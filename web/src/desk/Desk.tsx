@@ -2,11 +2,14 @@ import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } fr
 import { COMMON_CURRENCIES, INITIAL_BANKS, validateDraft, type Account, type AccountDraft, type AccountErrors } from "../workspace/accounts";
 import { FORMAT_VERSION } from "../workspace/crypto/vault";
 import { INACTIVITY_LOCK_MS } from "../workspace/inactivity";
+import type { Classification, DecisionRecord, MerchantChoice } from "../workspace/classification/decisions";
+import { isUncategorized } from "../workspace/classification/decisions";
 import type { ImportItem, StatementImport, Transaction } from "../workspace/import/statements";
 import { describeError, type Operator } from "../workspace/session";
 import { Brand } from "./Brand";
-import { formatBytes, formatDate, formatMoney, formatPeriod } from "./format";
 import { ImportDialog } from "./ImportDialog";
+import { Inbox } from "./Inbox";
+import { Ledger } from "./Ledger";
 import { Icon, type IconName } from "./Icon";
 import { Modal } from "./Modal";
 
@@ -24,18 +27,40 @@ interface DeskProps {
   accounts: Account[];
   statements: StatementImport[];
   transactions: Transaction[];
+  decisions: ReadonlyMap<string, DecisionRecord>;
+  merchantChoices: MerchantChoice[];
   usingEmulators: boolean;
   onAddAccount: (draft: AccountDraft) => Promise<Account>;
   onImport: (items: ImportItem[]) => Promise<StatementImport[]>;
   onLoadOriginal: (statementId: string) => Promise<Uint8Array>;
   onDeleteOriginal: (statementId: string) => Promise<void>;
+  onClassify: (transactionId: string, classification: Classification, options?: { remember?: boolean }) => Promise<{ merchantChoice?: MerchantChoice }>;
+  onApplyToSimilar: (merchantChoiceId: string) => Promise<number>;
+  onUndo: (transactionId: string) => Promise<void>;
   onLock: () => void;
   onSignOut: () => void;
 }
 
 type Dialog = "import" | "settings" | "add-account" | { deleteOriginal: StatementImport } | null;
 
-export function Desk({ operator, accounts, statements, transactions, usingEmulators, onAddAccount, onImport, onLoadOriginal, onDeleteOriginal, onLock, onSignOut }: DeskProps) {
+export function Desk({
+  operator,
+  accounts,
+  statements,
+  transactions,
+  decisions,
+  merchantChoices,
+  usingEmulators,
+  onAddAccount,
+  onImport,
+  onLoadOriginal,
+  onDeleteOriginal,
+  onClassify,
+  onApplyToSimilar,
+  onUndo,
+  onLock,
+  onSignOut,
+}: DeskProps) {
   const [view, setView] = useState<View>(viewFromHash);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [notice, setNotice] = useState("");
@@ -53,6 +78,7 @@ export function Desk({ operator, accounts, statements, transactions, usingEmulat
   };
 
   const initial = (operator.displayName ?? operator.email ?? "?").slice(0, 1).toUpperCase();
+  const inboxCount = transactions.filter((transaction) => isUncategorized(decisions.get(transaction.id))).length;
 
   return (
     <div className="dk-desk">
@@ -84,6 +110,12 @@ export function Desk({ operator, accounts, statements, transactions, usingEmulat
             <button type="button" key={item} aria-current={view === item ? "page" : undefined} onClick={() => go(item)}>
               <Icon name={item} />
               <span>{labels[item]}</span>
+              {item === "inbox" && inboxCount > 0 && (
+                <span className="dk-nav-count">
+                  {inboxCount}
+                  <span className="dk-visually-hidden"> to review</span>
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -119,10 +151,14 @@ export function Desk({ operator, accounts, statements, transactions, usingEmulat
           )}
           {view === "transactions" &&
             (transactions.length ? (
-              <TransactionsPage
+              <Ledger
                 accounts={accounts}
                 statements={statements}
                 transactions={transactions}
+                decisions={decisions}
+                onClassify={onClassify}
+                onUndo={onUndo}
+                onNotice={setNotice}
                 onDownload={async (statement) => {
                   try {
                     download(statement.original.fileName, statement.original.mediaType, await onLoadOriginal(statement.id));
@@ -137,11 +173,25 @@ export function Desk({ operator, accounts, statements, transactions, usingEmulat
                 Import a bank statement to see its transactions. Transfers and contributions will stay visible without inflating spending.
               </EmptyPage>
             ))}
-          {view === "inbox" && (
-            <EmptyPage title="Review inbox" subtitle="Uncategorized transactions, transfer matches and recurring-cost suggestions." icon="inbox" heading="Nothing to review">
-              Decisions appear here once imported transactions need a category, a transfer confirmation or a recurring-cost decision.
-            </EmptyPage>
-          )}
+          {view === "inbox" &&
+            (transactions.length ? (
+              <>
+                <PageTitle title="Review inbox" subtitle={`${inboxCount} ${inboxCount === 1 ? "decision" : "decisions"} waiting · each item is assigned on its own`} />
+                <Inbox
+                  accounts={accounts}
+                  transactions={transactions}
+                  decisions={decisions}
+                  merchantChoices={merchantChoices}
+                  onClassify={onClassify}
+                  onApplyToSimilar={onApplyToSimilar}
+                  onUndo={onUndo}
+                />
+              </>
+            ) : (
+              <EmptyPage title="Review inbox" subtitle="Uncategorized transactions, transfer matches and recurring-cost suggestions." icon="inbox" heading="Nothing to review">
+                Decisions appear here once imported transactions need a category, a transfer confirmation or a recurring-cost decision.
+              </EmptyPage>
+            ))}
           {view === "recurring" && (
             <EmptyPage title="Know what's coming" subtitle="Confirmed commitments, not every purchase that happens more than once." icon="recurring" heading="No recurring costs yet">
               Recurring costs you confirm will appear here with their cadence, expected amount and next payment date.
@@ -330,95 +380,6 @@ function download(fileName: string, mediaType: string, bytes: Uint8Array) {
   link.download = fileName;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 0);
-}
-
-function TransactionsPage({
-  accounts,
-  statements,
-  transactions,
-  onDownload,
-  onDelete,
-}: {
-  accounts: Account[];
-  statements: StatementImport[];
-  transactions: Transaction[];
-  onDownload: (statement: StatementImport) => void;
-  onDelete: (statement: StatementImport) => void;
-}) {
-  const accountName = new Map(accounts.map((account) => [account.id, `${account.name} · ${account.bank}`]));
-  const count = transactions.length;
-  return (
-    <>
-      <PageTitle title="Every movement, in context" subtitle={`${count} ${count === 1 ? "transaction" : "transactions"} from ${statements.length} imported ${statements.length === 1 ? "statement" : "statements"}`} />
-      <section className="dk-panel dk-table-panel" aria-labelledby="dk-ledger-heading">
-        <div className="dk-section-heading">
-          <h2 id="dk-ledger-heading">Transactions</h2>
-          <span>Original bank records · categories come next</span>
-        </div>
-        <div className="dk-table-scroll">
-          <table className="dk-table" aria-labelledby="dk-ledger-heading">
-            <thead>
-              <tr>
-                <th scope="col">Date</th>
-                <th scope="col">Description</th>
-                <th scope="col">Account</th>
-                <th scope="col">Category</th>
-                <th scope="col" className="dk-number">
-                  Amount
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((transaction) => (
-                <tr key={transaction.id}>
-                  <td>{formatDate(transaction.bank.date)}</td>
-                  <td>{transaction.bank.description}</td>
-                  <td>{accountName.get(transaction.accountId) ?? "Unknown account"}</td>
-                  {/* No category decision is stored yet, which is not the same as Other. */}
-                  <td>
-                    <span className="dk-tag dk-tag-warning">Uncategorized</span>
-                  </td>
-                  <td className="dk-number">{formatMoney(transaction.bank.amount, transaction.bank.currency)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-      <section className="dk-panel dk-statements" aria-labelledby="dk-statements-heading">
-        <div className="dk-section-heading">
-          <h2 id="dk-statements-heading">Imported statements</h2>
-          <span>Originals are kept encrypted until you delete them</span>
-        </div>
-        <ul className="dk-statement-list" aria-labelledby="dk-statements-heading">
-          {statements.map((statement) => (
-            <li key={statement.id}>
-              <span className="dk-account-name">
-                <strong>{statement.original.fileName}</strong>
-                <small>
-                  {accountName.get(statement.accountId) ?? "Unknown account"} · {statement.recordCount} {statement.recordCount === 1 ? "transaction" : "transactions"} ·{" "}
-                  {formatPeriod(statement.period)}
-                </small>
-              </span>
-              {statement.original.deletedAt ? (
-                <span className="dk-tag">Original deleted</span>
-              ) : (
-                <>
-                  <span className="dk-muted dk-statement-size">{formatBytes(statement.original.byteLength)}</span>
-                  <button type="button" className="dk-text-button" onClick={() => onDownload(statement)} aria-label={`Download original ${statement.original.fileName}`}>
-                    Download original
-                  </button>
-                  <button type="button" className="dk-text-button dk-danger-text" onClick={() => onDelete(statement)} aria-label={`Delete original ${statement.original.fileName}`}>
-                    Delete original
-                  </button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      </section>
-    </>
-  );
 }
 
 function DeleteOriginalDialog({ statement, onClose, onConfirm }: { statement: StatementImport; onClose: () => void; onConfirm: () => Promise<void> }) {

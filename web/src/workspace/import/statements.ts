@@ -1,6 +1,7 @@
 // Imported history: statements, the transactions they contributed, and the
 // retained original files. Readable forms exist only in browser memory.
 import type { Account } from "../accounts";
+import type { DecisionRecord } from "../classification/decisions";
 import { UnsupportedStatementError, type BankRecord, type ParsedStatement } from "./parse";
 
 export const STATEMENTS_COLLECTION = "statements";
@@ -114,7 +115,12 @@ export interface ImportBatch {
   originalChunks: OriginalChunk[];
   /** New accounts, and accounts with newly verified statement identifiers. */
   accounts: Account[];
+  /** Decisions for the new transactions from remembered merchant choices, saved in the same batch. */
+  decisions: DecisionRecord[];
 }
+
+/** Stored size of one small record beyond its plaintext: envelope fields, IV, tag and base64 framing. */
+const RECORD_OVERHEAD_BYTES = 256;
 
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new Uint8Array(bytes));
@@ -189,8 +195,13 @@ export function accountIdentityProblem(accounts: readonly Account[], account: Ac
  * file order, so two files for one new account remember both files'
  * identifiers on the same account.
  */
-export async function buildImportBatch(items: readonly ImportItem[], existing: readonly Account[], now = new Date()): Promise<ImportBatch> {
-  const batch: ImportBatch = { statements: [], transactionChunks: [], originalChunks: [], accounts: [] };
+export async function buildImportBatch(
+  items: readonly ImportItem[],
+  existing: readonly Account[],
+  now = new Date(),
+  classify: (transactions: Transaction[]) => DecisionRecord[] = () => [],
+): Promise<ImportBatch> {
+  const batch: ImportBatch = { statements: [], transactionChunks: [], originalChunks: [], accounts: [], decisions: [] };
   const accounts = new Map(existing.map((account) => [account.id, account]));
   const changed = new Map<string, Account>();
   for (const { parsed, file, account: chosen } of items) {
@@ -232,9 +243,11 @@ export async function buildImportBatch(items: readonly ImportItem[], existing: r
     batch.originalChunks.push(...originalChunks);
   }
   batch.accounts = [...changed.values()];
+  batch.decisions = classify(batch.transactionChunks.flatMap(chunkTransactionsOf));
   const plaintextBytes =
     batch.originalChunks.reduce((total, chunk) => total + chunk.bytes.byteLength, 0) +
-    batch.transactionChunks.reduce((total, chunk) => total + encoder.encode(JSON.stringify(chunk)).byteLength, 0);
+    batch.transactionChunks.reduce((total, chunk) => total + encoder.encode(JSON.stringify(chunk)).byteLength, 0) +
+    batch.decisions.reduce((total, record) => total + encoder.encode(JSON.stringify(record)).byteLength + RECORD_OVERHEAD_BYTES, 0);
   if (plaintextBytes > MAX_IMPORT_PLAINTEXT_BYTES) {
     throw new UnsupportedStatementError("These statements are too large to save in one import. Import fewer files at a time, or export a shorter period.");
   }

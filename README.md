@@ -157,13 +157,13 @@ ruff format --check
 
 ### Encrypted web workspace
 
-The web app in `web/` signs in with Google and stores accounts encrypted in Firestore (see `docs/adr/0003-workspace-encryption-format.md`). It imports Danske Bank netbank CSV statements: files are parsed and previewed in the browser, each file is assigned to an account, and only a confirmed import is encrypted and saved, together with the original file. The original can be downloaded or deleted later without removing its transactions. Development runs against the Firebase emulators under the `demo-budget-tracker` project. It needs Java 21+ (the minimum for the pinned `firebase-tools`) and no production project or billing.
+The web app in `web/` signs in with Google and stores accounts encrypted in Firestore (see `docs/adr/0003-workspace-encryption-format.md`). It imports Danske Bank netbank CSV statements: files are parsed and previewed in the browser, each file is assigned to an account, and only a confirmed import is encrypted and saved, together with the original file. The original can be downloaded or deleted later without removing its transactions. The inbox lists uncategorized transactions one at a time. Each one is assigned a type and category on its own, and a likely cash withdrawal is only a suggestion until the operator confirms it. A choice remembered for a merchant applies to later imports. Current uncategorized items change only when the operator clicks "Apply to N similar items". The ledger can search, filter and edit any transaction, and undo goes back one decision per transaction. Decisions and remembered choices are stored encrypted, separate from the imported transactions, in the `decisions` and `merchant-choices` collections. Those names are part of each record's authenticated data, so renaming either collection makes its records unreadable. Development runs against the Firebase emulators under the `demo-budget-tracker` project. It needs Java 21+ (the minimum for the pinned `firebase-tools`) and no production project or billing.
 
 ```bash
 cd web
 npm install
 npm run dev:emulators   # Auth + Firestore emulators and Vite in emulator mode
-npm test                # unit tests (encryption format, inactivity, accounts, statement parsing)
+npm test                # unit tests (encryption format, inactivity, accounts, statement parsing, classification)
 npm run test:rules      # Firestore security rules against the emulator
 npm run test:workspace  # end-to-end in Chromium, Firefox and WebKit against the emulators
 BRANDED_BROWSERS=chrome,msedge npm run test:workspace  # also installed Google Chrome and Microsoft Edge

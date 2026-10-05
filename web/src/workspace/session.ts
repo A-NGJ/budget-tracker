@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { onAuthStateChanged, signInWithPopup, signOut as firebaseSignOut, type User } from "firebase/auth";
 import { newAccount, sortAccounts, type Account, type AccountDraft } from "./accounts";
+import {
+  operatorEdit,
+  rememberChoice,
+  rememberedDecisions,
+  similarUncategorized,
+  undoEdit,
+  type Classification,
+  type DecisionRecord,
+  type MerchantChoice,
+} from "./classification/decisions";
 import { createWorkspace, unlockWorkspace, type WorkspaceHeader, type WorkspaceKey } from "./crypto/vault";
 import { googleProvider, type FirebaseServices } from "./firebase";
 import { watchInactivity } from "./inactivity";
@@ -12,6 +22,7 @@ import {
   loadOriginal as loadStoredOriginal,
   loadWorkspaceHeader,
   saveAccount,
+  saveDecisions,
   saveImport,
   saveNewWorkspaceHeader,
 } from "./store";
@@ -30,7 +41,17 @@ export type SessionPhase =
   | { kind: "loading-workspace"; operator: Operator }
   | { kind: "onboarding"; operator: Operator }
   | { kind: "locked"; operator: Operator; header: WorkspaceHeader; reason?: LockReason }
-  | { kind: "unlocked"; operator: Operator; header: WorkspaceHeader; accounts: Account[]; statements: StatementImport[]; transactions: Transaction[] }
+  | {
+      kind: "unlocked";
+      operator: Operator;
+      header: WorkspaceHeader;
+      accounts: Account[];
+      statements: StatementImport[];
+      transactions: Transaction[];
+      /** Category/type decisions by transaction id. A transaction without one is uncategorized. */
+      decisions: ReadonlyMap<string, DecisionRecord>;
+      merchantChoices: MerchantChoice[];
+    }
   | { kind: "failed"; operator: Operator; message: string };
 
 export interface WorkspaceSession {
@@ -45,6 +66,16 @@ export interface WorkspaceSession {
   importStatements: (items: ImportItem[]) => Promise<StatementImport[]>;
   loadOriginal: (statementId: string) => Promise<Uint8Array>;
   deleteOriginal: (statementId: string) => Promise<void>;
+  /**
+   * Set a transaction's category/type. With `remember`, also remember it for
+   * the transaction's merchant, for transactions imported later; returns that
+   * choice so the operator can explicitly apply it to similar inbox items.
+   */
+  classify: (transactionId: string, classification: Classification, options?: { remember?: boolean }) => Promise<{ merchantChoice?: MerchantChoice }>;
+  /** Resolve the other uncategorized transactions of a remembered choice's merchant. Returns how many were resolved. */
+  applyToSimilar: (merchantChoiceId: string) => Promise<number>;
+  /** Undo the most recent operator edit of a transaction. */
+  undo: (transactionId: string) => Promise<void>;
   retry: () => void;
 }
 
@@ -136,10 +167,10 @@ export function useWorkspaceSession({ auth, db }: FirebaseServices): WorkspaceSe
 
   const enter = useCallback(
     async (operator: Operator, header: WorkspaceHeader, key: WorkspaceKey, epoch: number) => {
-      const [accounts, history] = await Promise.all([loadAccounts(db, key), loadImportedHistory(db, key)]);
+      const [accounts, { decisions, ...history }] = await Promise.all([loadAccounts(db, key), loadImportedHistory(db, key)]);
       if (epoch !== epochRef.current) throw new SessionEndedError();
       keyRef.current = key;
-      setPhase({ kind: "unlocked", operator, header, accounts, ...history });
+      setPhase({ kind: "unlocked", operator, header, accounts, ...history, decisions: new Map(decisions.map((record) => [record.id, record])) });
     },
     [db],
   );
@@ -208,7 +239,11 @@ export function useWorkspaceSession({ auth, db }: FirebaseServices): WorkspaceSe
       const epoch = epochRef.current;
       const current = phaseRef.current;
       if (!key || current.kind !== "unlocked") throw new SessionEndedError();
-      const plan = await buildImportBatch(items, current.accounts);
+      // Remembered merchant choices classify only these new transactions,
+      // never history that already has a decision.
+      const plan = await buildImportBatch(items, current.accounts, new Date(), (transactions) =>
+        rememberedDecisions(transactions, current.merchantChoices, current.decisions),
+      );
       await saveImport(db, key, plan);
       if (epoch !== epochRef.current) throw new SessionEndedError();
       const transactions = plan.transactionChunks.flatMap(chunkTransactionsOf);
@@ -221,6 +256,7 @@ export function useWorkspaceSession({ auth, db }: FirebaseServices): WorkspaceSe
           accounts: sortAccounts([...accounts.values()]),
           statements: sortStatements([...latest.statements, ...plan.statements]),
           transactions: sortTransactions([...latest.transactions, ...transactions]),
+          decisions: withDecisions(latest.decisions, plan.decisions),
         };
       });
       return plan.statements;
@@ -261,11 +297,77 @@ export function useWorkspaceSession({ auth, db }: FirebaseServices): WorkspaceSe
     [db],
   );
 
+  const unlockedState = () => {
+    const key = keyRef.current;
+    const current = phaseRef.current;
+    if (!key || current.kind !== "unlocked") throw new SessionEndedError();
+    return { key, current, epoch: epochRef.current };
+  };
+
+  const commitDecisions = useCallback(
+    async (key: WorkspaceKey, epoch: number, decisions: DecisionRecord[], merchantChoices: MerchantChoice[] = []) => {
+      await saveDecisions(db, key, { decisions, merchantChoices });
+      if (epoch !== epochRef.current) throw new SessionEndedError();
+      setPhase((latest) => {
+        if (latest.kind !== "unlocked") return latest;
+        const choices = new Map(latest.merchantChoices.map((choice) => [choice.id, choice]));
+        for (const choice of merchantChoices) choices.set(choice.id, choice);
+        return { ...latest, decisions: withDecisions(latest.decisions, decisions), merchantChoices: [...choices.values()] };
+      });
+    },
+    [db],
+  );
+
+  const classify = useCallback(
+    async (transactionId: string, classification: Classification, options: { remember?: boolean } = {}) => {
+      const { key, current, epoch } = unlockedState();
+      const transaction = current.transactions.find((item) => item.id === transactionId);
+      if (!transaction) throw new Error("That transaction is not in this workspace.");
+      const record = operatorEdit(transactionId, current.decisions.get(transactionId), classification);
+      const merchantChoice = options.remember ? rememberChoice(transaction, classification, current.merchantChoices) : null;
+      if (options.remember && !merchantChoice) throw new Error("This description names no merchant to remember.");
+      await commitDecisions(key, epoch, [record], merchantChoice ? [merchantChoice] : []);
+      return merchantChoice ? { merchantChoice } : {};
+    },
+    [commitDecisions],
+  );
+
+  const applyToSimilar = useCallback(
+    async (merchantChoiceId: string) => {
+      const { key, current, epoch } = unlockedState();
+      const choice = current.merchantChoices.find((item) => item.id === merchantChoiceId);
+      if (!choice) throw new Error("That remembered choice is not in this workspace.");
+      const records = similarUncategorized(choice, current.transactions, current.decisions).map((transaction) =>
+        operatorEdit(transaction.id, current.decisions.get(transaction.id), choice.classification),
+      );
+      if (records.length) await commitDecisions(key, epoch, records);
+      return records.length;
+    },
+    [commitDecisions],
+  );
+
+  const undo = useCallback(
+    async (transactionId: string) => {
+      const { key, current, epoch } = unlockedState();
+      const record = current.decisions.get(transactionId);
+      if (!record) throw new Error("There is no edit to undo for this transaction.");
+      await commitDecisions(key, epoch, [undoEdit(record)]);
+    },
+    [commitDecisions],
+  );
+
   const retry = useCallback(() => {
     const operator = operatorRef.current;
     if (operator) void openWorkspace(operator);
     else setPhase({ kind: "signed-out" });
   }, [openWorkspace]);
 
-  return { phase, signIn, signOut, createWithPassphrase, unlock, lock, addAccount, importStatements, loadOriginal, deleteOriginal, retry };
+  return { phase, signIn, signOut, createWithPassphrase, unlock, lock, addAccount, importStatements, loadOriginal, deleteOriginal, classify, applyToSimilar, undo, retry };
+}
+
+function withDecisions(decisions: ReadonlyMap<string, DecisionRecord>, records: readonly DecisionRecord[]): ReadonlyMap<string, DecisionRecord> {
+  if (!records.length) return decisions;
+  const next = new Map(decisions);
+  for (const record of records) next.set(record.id, record);
+  return next;
 }

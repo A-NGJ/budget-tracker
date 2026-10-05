@@ -37,11 +37,16 @@ function Session({ services }: { services: FirebaseServices }) {
           accounts={phase.accounts}
           statements={phase.statements}
           transactions={phase.transactions}
+          decisions={phase.decisions}
+          merchantChoices={phase.merchantChoices}
           usingEmulators={services.usingEmulators}
           onAddAccount={session.addAccount}
           onImport={session.importStatements}
           onLoadOriginal={session.loadOriginal}
           onDeleteOriginal={session.deleteOriginal}
+          onClassify={session.classify}
+          onApplyToSimilar={session.applyToSimilar}
+          onUndo={session.undo}
           onLock={() => session.lock("manual")}
           onSignOut={signOut}
         />

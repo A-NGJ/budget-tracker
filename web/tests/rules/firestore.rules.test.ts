@@ -194,6 +194,83 @@ describe("imported statements", () => {
   });
 });
 
+describe("classification records", () => {
+  const record = (db: Firestore, name: string, id: string) => doc(db, "workspaces", OWNER, name, id);
+  const COLLECTIONS = ["decisions", "merchant-choices"];
+
+  it("lets the owner create, replace and list encrypted decisions and remembered choices", async () => {
+    await seedWorkspace();
+    const db = asOwner();
+    for (const name of COLLECTIONS) {
+      await assertSucceeds(setDoc(record(db, name, "s1-r1"), envelope()));
+      await assertSucceeds(setDoc(record(db, name, "s1-r1"), envelope({ ciphertext: bytes(80) })));
+      await assertSucceeds(getDoc(record(db, name, "s1-r1")));
+      await assertSucceeds(getDocs(collection(db, "workspaces", OWNER, name)));
+    }
+  });
+
+  it("never deletes them", async () => {
+    await seedWorkspace();
+    for (const name of COLLECTIONS) {
+      await assertSucceeds(setDoc(record(asOwner(), name, "s1-r1"), envelope()));
+      await assertFails(deleteDoc(record(asOwner(), name, "s1-r1")));
+    }
+  });
+
+  it("rejects other users, anonymous access and a foreign key id", async () => {
+    await seedWorkspace();
+    for (const name of COLLECTIONS) {
+      await env.withSecurityRulesDisabled(async (context) => setDoc(record(context.firestore() as unknown as Firestore, name, "s1-r1"), envelope()));
+      await assertFails(getDoc(record(asOther(), name, "s1-r1")));
+      await assertFails(getDocs(collection(asOther(), "workspaces", OWNER, name)));
+      await assertFails(getDocs(collection(anonymous(), "workspaces", OWNER, name)));
+      await assertFails(setDoc(record(asOther(), name, "s1-r2"), envelope()));
+      await assertFails(setDoc(record(asOther(), name, "s1-r1"), envelope()));
+      await assertFails(deleteDoc(record(asOther(), name, "s1-r1")));
+      await assertFails(setDoc(record(asOwner(), name, "s1-r2"), envelope({ keyId: "f".repeat(32) })));
+    }
+  });
+
+  it("rejects plaintext decisions, categories and merchant labels", async () => {
+    await seedWorkspace();
+    for (const name of COLLECTIONS) {
+      const ref = record(asOwner(), name, "s1-r1");
+      await assertFails(setDoc(ref, { ...envelope(), category: "groceries" }));
+      await assertFails(setDoc(ref, { ...envelope(), merchant: "Netto" }));
+      await assertFails(setDoc(ref, envelope({ ciphertext: '{"type":"purchase","category":"groceries"}' })));
+      await assertFails(setDoc(ref, envelope({ formatVersion: 2 })));
+      await assertFails(setDoc(ref, { formatVersion: 1, keyId: KEY_ID, iv: bytes(12), ciphertext: bytes(64) }));
+      await assertSucceeds(setDoc(ref, envelope()));
+      await assertFails(updateDoc(ref, { category: "groceries" }));
+    }
+  });
+
+  it("accepts a large import with its remembered decisions in one batch", async () => {
+    await seedWorkspace();
+    const db = asOwner();
+    const batch = writeBatch(db);
+    batch.set(record(db, "statements", "s1"), envelope());
+    batch.set(record(db, "transactions", "s1-0"), envelope());
+    batch.set(record(db, "originals", "s1-0"), envelope());
+    for (let row = 1; row <= 700; row += 1) batch.set(record(db, "decisions", `s1-r${row}`), envelope());
+    await assertSucceeds(batch.commit());
+  });
+
+  it("rejects a decision batch as a whole when one record carries plaintext", async () => {
+    await seedWorkspace();
+    const db = asOwner();
+    const batch = writeBatch(db);
+    batch.set(record(db, "decisions", "s1-r1"), envelope());
+    batch.set(record(db, "merchant-choices", "c1"), { ...envelope(), merchant: "Netto" });
+    await assertFails(batch.commit());
+    let leftBehind = true;
+    await env.withSecurityRulesDisabled(async (context) => {
+      leftBehind = (await getDoc(record(context.firestore() as unknown as Firestore, "decisions", "s1-r1"))).exists();
+    });
+    if (leftBehind) throw new Error("a rejected batch left a decision behind");
+  });
+});
+
 describe("everything else", () => {
   it("is denied", async () => {
     await assertFails(setDoc(doc(asOwner(), "transactions", "t1"), { amount: 1 }));
