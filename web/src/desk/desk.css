@@ -193,3 +193,35 @@ select[aria-invalid="true"] { border-color: var(--dk-danger); }
 @media (max-width: 1150px) { .dk-page { padding: 28px 24px; } .dk-topbar { padding: 0 24px; } .dk-metric { padding: 20px 18px; } }
 @media (max-width: 900px) { .dk-desk { grid-template-columns: 165px minmax(0, 1fr); } .dk-sidebar { padding: 25px 12px; } .dk-breadcrumb { display: none; } .dk-topbar { justify-content: flex-end; } .dk-metrics { gap: 10px; } .dk-metric > strong { font-size: 26px; } .dk-dashboard-grid { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* Review inbox */
+.dk-navigation .dk-nav-count { margin-left: auto; min-width: 20px; padding: 1px 6px; border-radius: 10px; background: var(--dk-soft); color: var(--dk-accent); font-size: 11px; font-weight: 600; text-align: center; }
+.dk-count { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 10px; background: var(--dk-bg); color: var(--dk-muted); font-size: 11px; font-weight: 600; }
+.dk-inbox-list { list-style: none; margin: 0; padding: 0; }
+.dk-inbox-list > li { border-top: 1px solid var(--dk-border); }
+.dk-inbox-item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 420px); gap: 24px; padding: 18px 0; }
+.dk-inbox-record h3 { margin: 0 0 4px; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.dk-inbox-meta { margin: 0 0 8px; font-size: 12px; color: var(--dk-muted); }
+.dk-inbox-meta strong { color: var(--dk-text); font-weight: 600; }
+.dk-inbox-reason { margin: 0; font-size: 12px; }
+.dk-suggestion { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; }
+.dk-inbox-decide { display: flex; flex-direction: column; gap: 10px; }
+.dk-inbox-decide .dk-button { align-self: flex-end; }
+.dk-classification-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dk-check { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--dk-text); }
+.dk-check input { width: auto; margin: 0; }
+.dk-inbox-notice { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.dk-inbox-notice p { margin: 0; color: var(--dk-text); }
+.dk-inline-buttons { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+/* Ledger filters and editing */
+.dk-filters { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; gap: 12px; padding: 16px 22px 0; }
+.dk-filter-summary { margin: 10px 22px 12px; font-size: 11px; }
+.dk-table-empty { padding: 16px 22px; font-size: 12px; }
+.dk-row-actions { white-space: nowrap; display: flex; gap: 12px; }
+.dk-original-record { padding: 14px; border-radius: 9px; background: var(--dk-bg); margin-bottom: 14px; }
+.dk-original-record h3 { margin: 0 0 2px; font-size: 13px; font-weight: 600; }
+.dk-original-record .dk-settings-list { margin-top: 8px; }
+.dk-original-record .dk-settings-list dt { margin-top: 8px; }
+
+@media (max-width: 1150px) { .dk-inbox-item { grid-template-columns: 1fr; } .dk-filters { grid-template-columns: 1fr 1fr; } }
