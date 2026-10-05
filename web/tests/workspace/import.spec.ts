@@ -106,6 +106,7 @@ test("preview, choose an account, confirm, and reopen the encrypted ledger after
   for (const text of SECRETS) expect(stored).not.toContain(text);
 
   // Nothing readable left the browser in any request body.
+  expect(uploads.length).toBeGreaterThan(0);
   for (const body of uploads) for (const text of SECRETS) expect(body).not.toContain(text);
   expect(uploads.filter((body) => body.startsWith("plaintext api"))).toEqual([]);
 

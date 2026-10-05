@@ -18,6 +18,7 @@ const SEPTEMBER = csv([
   row("16.09.2026", "Retur af køb Magasin", "350,00"),
 ]);
 const OCTOBER = csv([row("02.10.2026", "DK-NOTA NETTO ÆRØ 02.10", "-212,00"), row("04.10.2026", "Visa køb Café Kragen 04.10", "-60,00")]);
+const NOVEMBER = csv([row("02.11.2026", "DK-NOTA NETTO ÆRØ 02.11", "-315,00")]);
 
 // Readable fixture text and decisions that must never reach storage or the network in readable form.
 const SECRETS = ["Netto Ærø", "NETTO ÆRØ", "netto ærø", "Café Kragen", "Hævning", "Løn fra", "Groceries", "groceries", "Eating out", "eating-out", "cash-withdrawal", "contribution"];
@@ -230,6 +231,12 @@ test("a remembered choice classifies later imports without reclassifying reviewe
   await expectDecision(page, "Café Kragen 04.10", "Purchase", "Eating out");
   await expectDecision(page, "Netto Ærø 05.09", "Purchase", "Shopping");
   await expectDecision(page, "NETTO ÆRØ 02.10", "Purchase", "Groceries", "remembered");
+
+  // A remembered choice still classifies a new import after the reload, without
+  // changing the earlier reviewed transaction.
+  await importStatement(page, "november.csv", NOVEMBER, { existing: "Everyday · Danske Bank · DKK" });
+  await expectDecision(page, "NETTO ÆRØ 02.11", "Purchase", "Groceries", "remembered");
+  await expectDecision(page, "Netto Ærø 05.09", "Purchase", "Shopping");
 });
 
 test("types, search and filters in the ledger, with undo and the original record kept", async ({ page, request }) => {
@@ -312,6 +319,7 @@ test("types, search and filters in the ledger, with undo and the original record
   const decisions = await collectionDocs(request, `${path}/decisions`);
   expect(decisions).toHaveLength(4);
   for (const doc of decisions) expect(Object.keys(doc.fields).sort()).toEqual(ENVELOPE);
+  expect(uploads.length).toBeGreaterThan(0);
   for (const body of uploads) for (const text of SECRETS) expect(body).not.toContain(text);
 
   await unlockAfterReload(page);
